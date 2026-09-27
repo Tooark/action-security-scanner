@@ -1,5 +1,10 @@
+<!--
+  Links to files outside templates/, LICENSE and VERSION are absolute on
+  purpose: the GitLab CI/CD Catalog mirror (examples/gitlab-catalog-mirror/)
+  syncs this README without those files, so relative links break there.
+-->
 <div align="left">
-  <img src="media/banner-ci-security-scanner.png" alt="CI Security Scanner" width="100%" />
+  <img src="https://raw.githubusercontent.com/Tooark/ci-security-scanner/main/media/banner-ci-security-scanner.png" alt="CI Security Scanner" width="100%" />
 </div>
 
 # CI Security Scanner
@@ -8,13 +13,13 @@ Reusable CI configuration for the Tooark
 [`security-scanner`](https://github.com/Tooark/base-images/tree/main/security-scanner)
 image — **Trivy** (vulnerabilities), **Hadolint** (Dockerfile lint) and
 **Betterleaks** (secret detection) behind one `ark-tools` CLI, producing a
-single `ark-report-tools v1.2` report.
+single `ark-report-tools v1.3` report.
 
 One repository, two front ends:
 
 - **GitLab** — CI/CD component templates in [`templates/`](templates/), usable
   through `include: remote:` from anywhere, or published to a CI/CD Catalog.
-- **GitHub** — a composite Action defined by [`action.yml`](action.yml).
+- **GitHub** — a composite Action defined by [`action.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/action.yml).
 
 Input names, defaults and precedence are the same on both sides; only the
 syntax differs.
@@ -23,9 +28,9 @@ New to CI pipelines? The
 [onboarding guide](https://tooark.com/ci-security-scanner/) walks through
 every file in this repository and the reasoning behind each decision, written
 for readers who know software development but not CI. Source in
-[`docs/`](docs/).
+[`docs/`](https://github.com/Tooark/ci-security-scanner/tree/main/docs).
 
-🌍 **Languages:** ![USA Flag](https://flagcdn.com/w20/us.png) **English (this file)** · [![Brazil Flag](https://flagcdn.com/w20/br.png) Português](README.pt-BR.md)
+🌍 **Languages:** ![USA Flag](https://flagcdn.com/w20/us.png) **English (this file)** · [![Brazil Flag](https://flagcdn.com/w20/br.png) Português](https://github.com/Tooark/ci-security-scanner/blob/main/README.pt-BR.md)
 
 ---
 
@@ -36,6 +41,7 @@ for readers who know software development but not CI. Source in
 - [Trivy database cache](#trivy-database-cache)
 - [Inputs](#inputs)
 - [How precedence works](#how-precedence-works)
+- [Which image wrote the report](#which-image-wrote-the-report)
 - [Secrets](#secrets)
 - [Security notes](#security-notes)
 - [Overriding what inputs do not expose](#overriding-what-inputs-do-not-expose)
@@ -57,7 +63,7 @@ Works on gitlab.com and on any instance that can reach
 
 ```yaml
 include:
-  - remote: "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.1.0/templates/full-scan.yml"
+  - remote: "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.2.0/templates/full-scan.yml"
     inputs:
       stage: test
       image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
@@ -67,12 +73,12 @@ include:
 
 ### GitLab — CI/CD Catalog
 
-Once the [mirror project](examples/gitlab-catalog-mirror/) has published a
+Once the [mirror project](https://github.com/Tooark/ci-security-scanner/tree/main/examples/gitlab-catalog-mirror) has published a
 version to your instance:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.1.0
+  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.2.0
     inputs:
       image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
       trivy_severity: "CRITICAL,HIGH"
@@ -85,7 +91,7 @@ include:
   with:
     fetch-depth: 0 # Betterleaks needs the full git history
 
-- uses: Tooark/ci-security-scanner@v1.1.0
+- uses: Tooark/ci-security-scanner@v1.2.0
   with:
     command: full-scan
     image: "myapp:${{ github.sha }}"
@@ -93,7 +99,7 @@ include:
     trivy-severity: CRITICAL,HIGH
 ```
 
-Longer examples live in [`examples/`](examples/).
+Longer examples live in [`examples/`](https://github.com/Tooark/ci-security-scanner/tree/main/examples).
 
 ---
 
@@ -182,7 +188,7 @@ and meanings match one to one.
 | `job_name`             | —                         | `security:<command>`              | Change it to generate the job more than once                        |
 | `stage`                | —                         | `test`                            | The stage must exist in the pipeline                                |
 | `scanner_image`        | `scanner-image`           | `ghcr.io/tooark/security-scanner` |                                                                     |
-| `scanner_version`      | `scanner-version`         | `1.9`                             | Pin it                                                              |
+| `scanner_version`      | `scanner-version`         | `1.10`                            | Pin it                                                              |
 | `allow_failure`        | `soft-fail`               | `false`                           | GitLab marks the job non-blocking; the Action reports the exit code |
 | `rules`                | —                         | `[{when: on_success}]`            | GitHub uses the workflow's own `if:`                                |
 | `tags`                 | —                         | `[]`                              | Runner selection                                                    |
@@ -252,6 +258,20 @@ wins.
 
 ---
 
+## Which image wrote the report
+
+The `ark-report-tools` envelope carries an `image` object naming the scanner
+that produced the report. The image knows only its own build version, so both
+front ends pass the rest: `ARK_IMAGE_NAME` and `ARK_IMAGE_TAG` come from
+`scanner_image` and `scanner_version`, so a mirror or a floating tag is recorded
+as it ran. The Action also resolves the digest of the image it runs and passes
+`ARK_IMAGE_DIGEST`, which makes `image.reference` an immutable
+`name@sha256:…`. GitLab exposes no digest for a job image; set
+`ARK_IMAGE_DIGEST` as a CI/CD variable to record one. A CI/CD variable
+(GitLab) or job `env` (GitHub) overrides all three.
+
+---
+
 ## Secrets
 
 Input values are visible in the rendered pipeline configuration, so secrets
@@ -263,7 +283,7 @@ never travel as inputs. Pass them as masked CI/CD variables (GitLab) or job
 
 ```yaml
 # GitHub
-- uses: Tooark/ci-security-scanner@v1.1.0
+- uses: Tooark/ci-security-scanner@v1.2.0
   env:
     REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
   with:
@@ -343,7 +363,7 @@ anything the inputs do not cover:
 
 To run the same scan twice with different settings, include the template twice
 with a different `job_name` — see
-[`examples/gitlab/remote-include.gitlab-ci.yml`](examples/gitlab/remote-include.gitlab-ci.yml).
+[`examples/gitlab/remote-include.gitlab-ci.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/examples/gitlab/remote-include.gitlab-ci.yml).
 
 ---
 
@@ -373,7 +393,7 @@ run `./scripts/check-sync.sh`, update the pins it flags.
 
 ### GitHub Releases
 
-Push a `v*.*.*` tag. [`.github/workflows/release.yml`](.github/workflows/release.yml)
+Push a `v*.*.*` tag. [`.github/workflows/release.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/.github/workflows/release.yml)
 validates the templates, checks the tag against `VERSION`, creates the release
 with generated notes and moves the floating tags.
 
@@ -387,7 +407,7 @@ Only needed once; later releases offer the same checkbox.
 
 The catalog only lists components hosted on the GitLab instance itself, so a
 GitHub repository cannot be published to it directly. Set up the mirror project
-described in [`examples/gitlab-catalog-mirror/`](examples/gitlab-catalog-mirror/):
+described in [`examples/gitlab-catalog-mirror/`](https://github.com/Tooark/ci-security-scanner/tree/main/examples/gitlab-catalog-mirror):
 it polls GitHub releases on a schedule, copies `templates/` across when the
 version moves, and publishes to the internal catalog.
 
@@ -449,7 +469,7 @@ python3 -m pip install pyyaml
 
 python3 scripts/validate-templates.py   # structure, input wiring, dead inputs
 ./scripts/check-sync.sh                 # version pinning and cross-platform parity
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh
+shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
 ```
 
 CI runs all three, plus `actionlint`, plus a self-scan in which the Action in

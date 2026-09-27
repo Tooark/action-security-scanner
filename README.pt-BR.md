@@ -1,5 +1,10 @@
+<!--
+  Links para arquivos fora de templates/, LICENSE e VERSION são absolutos de
+  propósito: o espelho do GitLab CI/CD Catalog (examples/gitlab-catalog-mirror/)
+  sincroniza o README sem esses arquivos, e links relativos quebram lá.
+-->
 <div align="left">
-  <img src="media/banner-ci-security-scanner.png" alt="CI Security Scanner" width="100%" />
+  <img src="https://raw.githubusercontent.com/Tooark/ci-security-scanner/main/media/banner-ci-security-scanner.png" alt="CI Security Scanner" width="100%" />
 </div>
 
 # CI Security Scanner
@@ -8,14 +13,14 @@ Configuração de CI reutilizável para a imagem
 [`security-scanner`](https://github.com/Tooark/base-images/tree/main/security-scanner)
 da Tooark — **Trivy** (vulnerabilidades), **Hadolint** (lint de Dockerfile) e
 **Betterleaks** (detecção de secrets) sob um único CLI `ark-tools`, produzindo
-um relatório `ark-report-tools v1.2`.
+um relatório `ark-report-tools v1.3`.
 
 Um repositório, duas portas de entrada:
 
 - **GitLab** — templates de componente CI/CD em [`templates/`](templates/),
   utilizáveis via `include: remote:` de qualquer lugar ou publicados em um
   CI/CD Catalog.
-- **GitHub** — uma composite Action definida por [`action.yml`](action.yml).
+- **GitHub** — uma composite Action definida por [`action.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/action.yml).
 
 Nomes de input, defaults e precedência são os mesmos nos dois lados; só a
 sintaxe muda.
@@ -23,9 +28,9 @@ sintaxe muda.
 Novo em pipelines? O
 [guia de onboarding](https://tooark.com/ci-security-scanner/) percorre
 cada arquivo deste repositório e o porquê de cada decisão, escrito para quem
-conhece desenvolvimento de software, mas não CI. Fonte em [`docs/`](docs/).
+conhece desenvolvimento de software, mas não CI. Fonte em [`docs/`](https://github.com/Tooark/ci-security-scanner/tree/main/docs).
 
-🌍 **Idiomas:** [![USA Flag](https://flagcdn.com/w20/us.png) English](README.md) · ![Brazil Flag](https://flagcdn.com/w20/br.png) **Português (este arquivo)**
+🌍 **Idiomas:** [![USA Flag](https://flagcdn.com/w20/us.png) English](https://github.com/Tooark/ci-security-scanner/blob/main/README.md) · ![Brazil Flag](https://flagcdn.com/w20/br.png) **Português (este arquivo)**
 
 ---
 
@@ -36,6 +41,7 @@ conhece desenvolvimento de software, mas não CI. Fonte em [`docs/`](docs/).
 - [Cache do banco do Trivy](#cache-do-banco-do-trivy)
 - [Inputs](#inputs)
 - [Como funciona a precedência](#como-funciona-a-precedência)
+- [Qual imagem gerou o relatório](#qual-imagem-gerou-o-relatório)
 - [Secrets](#secrets)
 - [Notas de segurança](#notas-de-segurança)
 - [Sobrescrevendo o que os inputs não expõem](#sobrescrevendo-o-que-os-inputs-não-expõem)
@@ -57,7 +63,7 @@ Funciona no gitlab.com e em qualquer instância que alcance
 
 ```yaml
 include:
-  - remote: "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.1.0/templates/full-scan.yml"
+  - remote: "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.2.0/templates/full-scan.yml"
     inputs:
       stage: test
       image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
@@ -67,12 +73,12 @@ include:
 
 ### GitLab — CI/CD Catalog
 
-Depois que o [projeto espelho](examples/gitlab-catalog-mirror/) publicar uma
+Depois que o [projeto espelho](https://github.com/Tooark/ci-security-scanner/tree/main/examples/gitlab-catalog-mirror) publicar uma
 versão na sua instância:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.1.0
+  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.2.0
     inputs:
       image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
       trivy_severity: "CRITICAL,HIGH"
@@ -85,7 +91,7 @@ include:
   with:
     fetch-depth: 0 # Betterleaks precisa do history completo
 
-- uses: Tooark/ci-security-scanner@v1.1.0
+- uses: Tooark/ci-security-scanner@v1.2.0
   with:
     command: full-scan
     image: "myapp:${{ github.sha }}"
@@ -93,7 +99,7 @@ include:
     trivy-severity: CRITICAL,HIGH
 ```
 
-Exemplos completos em [`examples/`](examples/).
+Exemplos completos em [`examples/`](https://github.com/Tooark/ci-security-scanner/tree/main/examples).
 
 ---
 
@@ -183,7 +189,7 @@ nomes e significados são idênticos.
 | `job_name`             | —                         | `security:<comando>`              | Mude para gerar o job mais de uma vez                                  |
 | `stage`                | —                         | `test`                            | O stage precisa existir no pipeline                                    |
 | `scanner_image`        | `scanner-image`           | `ghcr.io/tooark/security-scanner` |                                                                        |
-| `scanner_version`      | `scanner-version`         | `1.9`                             | Sempre pinado                                                          |
+| `scanner_version`      | `scanner-version`         | `1.10`                            | Sempre pinado                                                          |
 | `allow_failure`        | `soft-fail`               | `false`                           | No GitLab o job vira não-bloqueante; na Action o exit code vira output |
 | `rules`                | —                         | `[{when: on_success}]`            | No GitHub use o `if:` do próprio workflow                              |
 | `tags`                 | —                         | `[]`                              | Seleção de runner                                                      |
@@ -252,6 +258,20 @@ em todos os jobs, em vez de repetir o valor. Definir os dois faz o input vencer.
 
 ---
 
+## Qual imagem gerou o relatório
+
+O envelope `ark-report-tools` traz um objeto `image` com o scanner que gerou o
+relatório. A imagem só conhece a própria versão de build, então as duas
+fachadas passam o resto: `ARK_IMAGE_NAME` e `ARK_IMAGE_TAG` vêm de
+`scanner_image` e `scanner_version`, e assim um mirror ou uma tag flutuante
+fica registrado como rodou. A Action também resolve o digest da imagem que
+executa e passa `ARK_IMAGE_DIGEST`, o que torna o `image.reference` um
+`nome@sha256:…` imutável. O GitLab não expõe o digest da imagem do job; defina
+`ARK_IMAGE_DIGEST` como variável de CI/CD para registrá-lo. Uma variável de
+CI/CD (GitLab) ou o `env` do job (GitHub) sobrescreve as três.
+
+---
+
 ## Secrets
 
 Valores de input aparecem na configuração renderizada do pipeline, então
@@ -263,7 +283,7 @@ ou `env` do job (GitHub) — o repasse para o container é automático:
 
 ```yaml
 # GitHub
-- uses: Tooark/ci-security-scanner@v1.1.0
+- uses: Tooark/ci-security-scanner@v1.2.0
   env:
     REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
   with:
@@ -343,7 +363,7 @@ inputs não cobrem:
 
 Para rodar o mesmo scan duas vezes com configurações diferentes, inclua o
 template duas vezes com `job_name` diferente — veja
-[`examples/gitlab/remote-include.gitlab-ci.yml`](examples/gitlab/remote-include.gitlab-ci.yml).
+[`examples/gitlab/remote-include.gitlab-ci.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/examples/gitlab/remote-include.gitlab-ci.yml).
 
 ---
 
@@ -375,7 +395,7 @@ Subir a versão da imagem é, portanto, uma mudança de três linhas: edite o
 ### GitHub Releases
 
 Faça push de uma tag `v*.*.*`. O
-[`.github/workflows/release.yml`](.github/workflows/release.yml) valida os
+[`.github/workflows/release.yml`](https://github.com/Tooark/ci-security-scanner/blob/main/.github/workflows/release.yml) valida os
 templates, confere a tag contra o `VERSION`, cria o release com notas geradas e
 move as tags flutuantes.
 
@@ -390,7 +410,7 @@ Só na primeira vez; os releases seguintes oferecem a mesma caixa.
 O catalog só lista componentes hospedados na própria instância GitLab, então um
 repositório do GitHub não pode ser publicado nele diretamente. Monte o projeto
 espelho descrito em
-[`examples/gitlab-catalog-mirror/`](examples/gitlab-catalog-mirror/): ele
+[`examples/gitlab-catalog-mirror/`](https://github.com/Tooark/ci-security-scanner/tree/main/examples/gitlab-catalog-mirror): ele
 consulta os releases do GitHub por schedule, copia o `templates/` quando a
 versão muda e publica no catalog interno.
 
@@ -446,7 +466,7 @@ python3 -m pip install pyyaml
 
 python3 scripts/validate-templates.py   # estrutura, wiring de inputs, inputs mortos
 ./scripts/check-sync.sh                 # pinning de versão e paridade entre plataformas
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh
+shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
 ```
 
 O CI roda os três, mais o `actionlint`, mais um self-scan em que a Action deste

@@ -82,7 +82,7 @@ python3 -m pip install pyyaml
 
 python3 scripts/validate-templates.py   # structure, input wiring, dead inputs
 ./scripts/check-sync.sh                 # version pinning and cross-platform parity
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh
+shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
 ```
 
 Run all three before opening a PR. CI runs them, plus `actionlint`, plus a
@@ -133,22 +133,35 @@ waiting for the right input.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
-[`VERSION`](VERSION) is the single source of truth for both the component
-version and the scanner image tag that every template and the Action pin:
+[`VERSION`](VERSION) is the single source of truth for the component version,
+the scanner image tag that every template and the Action pin, and the report
+envelope that image writes:
 
 ```text
-COMPONENT_VERSION=1.1.0
+COMPONENT_VERSION=1.2.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.9
+SCANNER_VERSION=1.10
+REPORT_SCHEMA=ark-report-tools
+REPORT_VERSION=1.3
 ```
 
-Bumping the scanner image is a three-step change: edit `VERSION`, run
-`./scripts/check-sync.sh`, update the pins it flags. Never edit a pin directly.
+Bumping the scanner image is a three-step change: edit `VERSION` (and
+`REPORT_VERSION` when the new image writes a new envelope), run
+`./scripts/check-sync.sh`, update the pins and mentions it flags. Never edit a
+pin directly. The onboarding guide needs no edit: it has no version of its own
+to update.
 
 What counts as breaking here is anything that changes what runs inside a
 consumer's pipeline: a removed or renamed input, a changed default, or a new
 minimum runner version pulled in by an action referenced from `action.yml`.
 Record it in `CHANGELOG.md` — the consumer cannot see the diff, only the tag.
+
+The scanner image default is the exception: it follows the image's own
+versioning. A minor or patch bump of the image ships in a minor or patch
+release here, a major one in a major release. What the image changes with it —
+the report envelope, a tool version — is the image's to version; the
+changelog entry still names anything a consumer has to act on, such as a
+collector that must accept a new envelope version.
 
 ---
 
@@ -187,6 +200,13 @@ docs(readme): document the distributed cache caveat
   _why_ a decision was made; the README explains _how_ to use the component.
   Resist adding a third place that says the same thing — there is no
   `check-sync.sh` for prose.
+- The guide never types a version. It writes `{{COMPONENT_VERSION}}`,
+  `{{SCANNER_VERSION}}` and the other `VERSION` keys, and
+  `scripts/render-docs.sh` fills them in before Pages publishes it; the header
+  of that script lists the derived ones, such as `{{COMPONENT_MINOR}}`.
+  `check-sync.sh` fails on a version typed by hand. To preview the page, run
+  `./scripts/render-docs.sh` and open `_site/index.html` — `docs/index.html`
+  itself shows the raw placeholders.
 - Comments in the templates and in `src/run-scanner.sh` record the reason a
   line exists, not what it does. Several of them are the only surviving record
   of a bug that took a while to find.
