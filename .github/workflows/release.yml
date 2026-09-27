@@ -26,7 +26,7 @@ jobs:
         run: bash scripts/check-sync.sh
 
       - name: ShellCheck
-        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh
+        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
 
       # The tag is what downstream consumers pin, so it must agree with the
       # version recorded in the repository.
