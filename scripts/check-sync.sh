@@ -5,7 +5,9 @@
 #
 #   1. every artifact pins exactly the scanner image declared in VERSION;
 #   2. every ARK_IN_* an artifact sets is actually consumed downstream;
-#   3. every copy-paste reference in the docs pins COMPONENT_VERSION.
+#   3. every copy-paste reference in the docs pins COMPONENT_VERSION, every
+#      mention of the report envelope names REPORT_VERSION, and the onboarding
+#      guide takes all of its versions from VERSION.
 #
 # Run it locally with: ./scripts/check-sync.sh
 #
@@ -165,9 +167,32 @@ done < <(grep -oE 'ARK_IN_[A-Z0-9_]+' action.yml | sort -u)
 [ "$action_ok" -eq 1 ] && ok "action.yml -> src/run-scanner.sh"
 
 echo
-echo "4. component version in copy-paste references"
+echo "4. versions quoted in the documentation"
 
 COMPONENT_VERSION="$(version_field COMPONENT_VERSION)"
+REPORT_SCHEMA="$(version_field REPORT_SCHEMA)"
+REPORT_VERSION="$(version_field REPORT_VERSION)"
+
+# The guide carries {{PLACEHOLDERS}} instead of versions. Readers get the
+# rendered copy, so that is what the reference checks below read; rendering
+# also fails on a placeholder VERSION does not declare.
+rendered="$(mktemp -d)"
+trap 'rm -rf "$rendered"' EXIT
+
+if bash scripts/render-docs.sh "$rendered" >/dev/null; then
+  ok "docs/ renders from VERSION"
+else
+  fail "docs/ does not render from VERSION (run ./scripts/render-docs.sh)"
+fi
+
+# Where a file is read from: the rendered copy for the guide, itself otherwise.
+checked_copy() {
+  if [ "$1" = docs/index.html ]; then
+    printf '%s' "$rendered/index.html"
+  else
+    printf '%s' "$1"
+  fi
+}
 
 # Only the three forms a reader copies into their own pipeline. Prose that
 # explains the tagging scheme -- "v1.0.0 is never moved", the table of floating
@@ -205,7 +230,7 @@ for file in "${version_ref_files[@]}"; do
       fail "$file pins $found, expected $COMPONENT_VERSION  ($ref)"
       file_ok=0
     fi
-  done < <(grep -oE "$VERSION_REF_RE" "$file" | sort -u)
+  done < <(grep -oE "$VERSION_REF_RE" "$(checked_copy "$file")" | sort -u)
 
   if [ "$seen" -eq 0 ]; then
     fail "$file has no component version reference; restore it or drop the file from the list"
@@ -213,6 +238,58 @@ for file in "${version_ref_files[@]}"; do
     ok "$file"
   fi
 done
+
+# The envelope version is what a collector behind report_url validates against,
+# so a stale one in the docs sends people to the wrong schema. CHANGELOG.md is
+# history and deliberately not matched.
+REPORT_REF_RE="${REPORT_SCHEMA}\`? (envelope )?v[0-9]+(\.[0-9]+)*"
+
+report_ref_files=(
+  README.md
+  README.pt-BR.md
+  docs/index.html
+  templates/full-scan.yml
+)
+
+for file in "${report_ref_files[@]}"; do
+  file_ok=1
+  seen=0
+  while read -r ref; do
+    [ -n "$ref" ] || continue
+    seen=1
+    found="${ref##*v}"
+    if [ "$found" != "$REPORT_VERSION" ]; then
+      fail "$file names $REPORT_SCHEMA v$found, expected v$REPORT_VERSION  ($ref)"
+      file_ok=0
+    fi
+  done < <(grep -oE "$REPORT_REF_RE" "$(checked_copy "$file")" | sort -u)
+
+  if [ "$seen" -eq 0 ]; then
+    fail "$file never names the $REPORT_SCHEMA version; restore it or drop the file from the list"
+  elif [ "$file_ok" -eq 1 ]; then
+    ok "$file names $REPORT_SCHEMA v$REPORT_VERSION"
+  fi
+done
+
+# A version typed straight into the guide still renders, and still agrees with
+# VERSION today; it is the next bump that leaves it behind. Catch it now. Only
+# the page body is read: the stylesheet's numbers (line-height: 1.3) are not
+# versions.
+guide_ok=1
+body_line="$(grep -n '<body' docs/index.html | head -n1 | cut -d: -f1)"
+for key in COMPONENT_VERSION SCANNER_VERSION REPORT_VERSION; do
+  value="$(version_field "$key")"
+  # Bounded on both sides so 1.3 matches neither 11.3 nor 1.30 nor the 1.3.01
+  # of an SVG path; a sentence-ending "1.3." still counts.
+  literal_re="(^|[^0-9.])${value//./\\.}([^0-9.]|\.([^0-9]|$)|$)"
+  while IFS=: read -r line _; do
+    [ -n "$line" ] || continue
+    [ "$line" -gt "${body_line:-0}" ] || continue
+    fail "docs/index.html:$line types $value; write {{$key}} instead"
+    guide_ok=0
+  done < <(grep -nE "$literal_re" docs/index.html || true)
+done
+[ "$guide_ok" -eq 1 ] && ok "docs/index.html types no version by hand"
 
 echo
 if [ "$failures" -gt 0 ]; then

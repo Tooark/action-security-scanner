@@ -16,6 +16,12 @@
      tema e idioma precisam ser carimbados antes da primeira pintura. -->
     <script src="guide.js"></script>
 
+    <!-- Versoes: nenhuma e digitada neste arquivo. Os marcadores entre chaves
+     duplas (COMPONENT_VERSION, SCANNER_VERSION, REPORT_VERSION e os demais
+     campos do VERSION) sao preenchidos por scripts/render-docs.sh, que o
+     deploy do Pages roda antes de publicar. Para ver a pagina renderizada:
+     ./scripts/render-docs.sh e abra _site/index.html. -->
+
     <style>
       /* Reset minimo. */
       :root {
@@ -69,6 +75,20 @@
         border-color: var(--rule-strong);
       }
 
+      /* O link do GitHub usa a mesma pilula dos botoes. */
+      a.toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+      }
+
+      a.toggle-btn svg {
+        width: 12px;
+        height: 12px;
+        flex: none;
+      }
+
       /* Idioma. So existem regras de OCULTAR: o elemento visivel mantem o display
      que o proprio CSS da pagina lhe deu (a lista .facts, por exemplo, e flex —
      um display:block aqui a quebraria). Sem data-lang, o HTML ja nasce com
@@ -86,6 +106,18 @@
         }
         .toggle-btn {
           padding: 6px 9px;
+        }
+      }
+
+      /* Em tela de celular os tres controles nao cabem na linha do eyebrow e
+     passariam por cima dele: saem do posicionamento absoluto e entram no
+     fluxo, no topo do header (por isso o .toggles vem primeiro no HTML). */
+      @media (max-width: 560px) {
+        .toggles {
+          position: static;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+          margin-bottom: 22px;
         }
       }
     </style>
@@ -118,7 +150,10 @@
         --warn-soft: #f7eddf;
         --crit: #9c2f24;
         --crit-soft: #f7e5e2;
-        --trivy: #57f0fe;
+        /* Cor de cada ferramenta, usada no titulo e na borda dos cards de gate.
+           Um tom por tema, porque e texto e precisa de contraste 4.5:1 sobre o
+           --surface: o ciano do Trivy (#57f0fe) sobre branco fica em 1.4:1. */
+        --trivy: #00788a;
         --hadolint: #3b72c6;
         --betterleaks: #155a83;
         --code-bg: #edf1ef;
@@ -148,8 +183,8 @@
           --crit: #e07e71;
           --crit-soft: #2e1c19;
           --trivy: #57f0fe;
-          --hadolint: #3b72c6;
-          --betterleaks: #155a83;
+          --hadolint: #7aa2e3;
+          --betterleaks: #5aa9dc;
           --code-bg: #131b19;
           --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
@@ -171,6 +206,9 @@
         --warn-soft: #2c2418;
         --crit: #e07e71;
         --crit-soft: #2e1c19;
+        --trivy: #57f0fe;
+        --hadolint: #7aa2e3;
+        --betterleaks: #5aa9dc;
         --code-bg: #131b19;
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
@@ -286,6 +324,32 @@
       .facts li b {
         color: var(--ink);
         font-weight: 500;
+      }
+
+      /* Pilula com link: o <a> cobre a pilula inteira, entao o clique vale na
+         borda e nao so no texto. A seta marca que ela leva para fora. */
+      .facts a {
+        display: block;
+        margin: -7px -10px;
+        padding: 7px 10px;
+        border-radius: 3px;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .facts a::after {
+        content: "↗";
+        content: "↗" / "";
+        margin-left: 5px;
+        color: var(--ink-3);
+      }
+
+      .facts a:hover b {
+        color: var(--accent-ink);
+      }
+
+      .facts li:has(> a:hover) {
+        border-color: var(--rule-strong);
       }
 
       /* ---------- nav ---------- */
@@ -769,46 +833,6 @@
   <body>
     <div class="shell">
       <header class="masthead">
-        <p class="eyebrow">Onboarding · Tooark</p>
-        <h1 lang="pt-BR">
-          ci-security-scanner<br /><span class="accent">por dentro</span>
-        </h1>
-        <h1 lang="en">
-          ci-security-scanner<br /><span class="accent">from the inside</span>
-        </h1>
-
-        <p class="thesis" lang="pt-BR">
-          Este repositório <strong>não contém um scanner de segurança</strong>.
-          Ele contém a embalagem reutilizável de um — publicada duas vezes, uma
-          para GitHub Actions e uma para GitLab CI, com os mesmos nomes, os
-          mesmos defaults e a mesma regra de precedência nas duas. Este guia
-          percorre cada arquivo e, principalmente, o porquê de cada decisão.
-        </p>
-        <p class="thesis" lang="en">
-          This repository <strong>does not contain a security scanner</strong>.
-          It contains the reusable packaging for one — published twice, once for
-          GitHub Actions and once for GitLab CI, with the same names, the same
-          defaults and the same precedence rule on both sides. This guide walks
-          every file and, above all, the reasoning behind each decision.
-        </p>
-
-        <ul class="facts" lang="pt-BR">
-          <li><b>Tooark/ci-security-scanner</b></li>
-          <li>v<b>1.1.0</b></li>
-          <li>scanner <b>1.9</b></li>
-          <li><b>7</b> scans</li>
-          <li><b>2</b> plataformas</li>
-          <li>MIT</li>
-        </ul>
-        <ul class="facts" lang="en">
-          <li><b>Tooark/ci-security-scanner</b></li>
-          <li>v<b>1.1.0</b></li>
-          <li>scanner <b>1.9</b></li>
-          <li><b>7</b> scans</li>
-          <li><b>2</b> platforms</li>
-          <li>MIT</li>
-        </ul>
-
         <div class="toggles">
           <button
             type="button"
@@ -834,7 +858,108 @@
           >
             modo escuro
           </button>
+          <a
+            class="toggle-btn"
+            href="https://github.com/Tooark/ci-security-scanner"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path
+                d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"
+              ></path>
+            </svg>
+            GitHub
+          </a>
         </div>
+
+        <p class="eyebrow">Onboarding · Tooark</p>
+        <h1 lang="pt-BR">
+          ci-security-scanner<br /><span class="accent">por dentro</span>
+        </h1>
+        <h1 lang="en">
+          ci-security-scanner<br /><span class="accent">from the inside</span>
+        </h1>
+
+        <p class="thesis" lang="pt-BR">
+          Este repositório <strong>não contém um scanner de segurança</strong>.
+          Ele contém a embalagem reutilizável de um — publicada duas vezes, uma
+          para GitHub Actions e uma para GitLab CI, com os mesmos nomes, os
+          mesmos defaults e a mesma regra de precedência nas duas. Este guia
+          percorre cada arquivo e, principalmente, o porquê de cada decisão.
+        </p>
+        <p class="thesis" lang="en">
+          This repository <strong>does not contain a security scanner</strong>.
+          It contains the reusable packaging for one — published twice, once for
+          GitHub Actions and once for GitLab CI, with the same names, the same
+          defaults and the same precedence rule on both sides. This guide walks
+          every file and, above all, the reasoning behind each decision.
+        </p>
+
+        <ul class="facts" lang="pt-BR">
+          <li>
+            <a
+              href="https://github.com/Tooark/ci-security-scanner"
+              title="Repositório no GitHub"
+              target="_blank"
+              rel="noopener"
+              ><b>Tooark/ci-security-scanner</b></a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/Tooark/ci-security-scanner/releases/tag/v{{COMPONENT_VERSION}}"
+              title="Release v{{COMPONENT_VERSION}} no GitHub"
+              target="_blank"
+              rel="noopener"
+              >v<b>{{COMPONENT_VERSION}}</b></a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/Tooark/base-images/releases/tag/security-scanner-{{SCANNER_RELEASE}}"
+              title="Imagem {{SCANNER_IMAGE}}:{{SCANNER_VERSION}}"
+              target="_blank"
+              rel="noopener"
+              >scanner <b>{{SCANNER_VERSION}}</b></a
+            >
+          </li>
+          <li><b>7</b> scans</li>
+          <li><b>2</b> plataformas</li>
+          <li>MIT</li>
+        </ul>
+        <ul class="facts" lang="en">
+          <li>
+            <a
+              href="https://github.com/Tooark/ci-security-scanner"
+              title="Repository on GitHub"
+              target="_blank"
+              rel="noopener"
+              ><b>Tooark/ci-security-scanner</b></a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/Tooark/ci-security-scanner/releases/tag/v{{COMPONENT_VERSION}}"
+              title="Release v{{COMPONENT_VERSION}} on GitHub"
+              target="_blank"
+              rel="noopener"
+              >v<b>{{COMPONENT_VERSION}}</b></a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/Tooark/base-images/releases/tag/security-scanner-{{SCANNER_RELEASE}}"
+              title="Image {{SCANNER_IMAGE}}:{{SCANNER_VERSION}}"
+              target="_blank"
+              rel="noopener"
+              >scanner <b>{{SCANNER_VERSION}}</b></a
+            >
+          </li>
+          <li><b>7</b> scans</li>
+          <li><b>2</b> platforms</li>
+          <li>MIT</li>
+        </ul>
       </header>
 
       <nav aria-label="Guide sections">
@@ -970,10 +1095,10 @@
             <p>
               O scanner é uma imagem Docker publicada a partir de
               <code>Tooark/base-images</code> como
-              <code>ghcr.io/tooark/security-scanner:1.9</code>. Dentro dela
+              <code>{{SCANNER_IMAGE}}:{{SCANNER_VERSION}}</code>. Dentro dela
               existe um CLI chamado <code>ark-tools</code>, que orquestra três
               ferramentas e produz um relatório JSON no formato
-              <code>ark-report-tools v1.2</code>.
+              <code>{{REPORT_SCHEMA}} v{{REPORT_VERSION}}</code>.
             </p>
 
             <p>
@@ -992,8 +1117,9 @@
             <p>
               Em vocabulário de desenvolvimento: este repositório é uma
               <strong>biblioteca</strong>, e os projetos que a consomem são os
-              dependentes. A tag <code>v1.0.0</code> é a versão do pacote. Quem
-              consome não copia código — declara uma dependência.
+              dependentes. A tag <code>v{{COMPONENT_VERSION}}</code> é a versão
+              do pacote. Quem consome não copia código — declara uma
+              dependência.
             </p>
 
             <h3>Duas fachadas sobre o mesmo comportamento</h3>
@@ -1054,10 +1180,10 @@
             <p>
               The scanner is a Docker image built from
               <code>Tooark/base-images</code> and published as
-              <code>ghcr.io/tooark/security-scanner:1.9</code>. Inside it there
-              is a CLI called <code>ark-tools</code> that orchestrates three
-              tools and produces a JSON report in the
-              <code>ark-report-tools v1.2</code> format.
+              <code>{{SCANNER_IMAGE}}:{{SCANNER_VERSION}}</code>. Inside it
+              there is a CLI called <code>ark-tools</code> that orchestrates
+              three tools and produces a JSON report in the
+              <code>{{REPORT_SCHEMA}} v{{REPORT_VERSION}}</code> format.
             </p>
 
             <p>This repository solves a different and very specific problem:</p>
@@ -1074,8 +1200,9 @@
             <p>
               In development vocabulary: this repository is a
               <strong>library</strong>, and the projects that consume it are its
-              dependents. The tag <code>v1.0.0</code> is the package version.
-              Consumers do not copy code — they declare a dependency.
+              dependents. The tag <code>v{{COMPONENT_VERSION}}</code> is the
+              package version. Consumers do not copy code — they declare a
+              dependency.
             </p>
 
             <h3>Two front ends over the same behaviour</h3>
@@ -1311,7 +1438,7 @@
             </p>
 
             <div class="gates">
-              <div class="gate" style="--tone: var(--crit)">
+              <div class="gate" style="--tone: var(--trivy)">
                 <h4>Trivy</h4>
                 <p>
                   Fails when a severity listed in
@@ -1319,7 +1446,7 @@
                 </p>
                 <span class="off">turn off → trivy_exit_code: "0"</span>
               </div>
-              <div class="gate" style="--tone: var(--warn)">
+              <div class="gate" style="--tone: var(--hadolint)">
                 <h4>Hadolint</h4>
                 <p>
                   Fails at or above the level set in
@@ -1329,7 +1456,7 @@
                   >turn off → hadolint_failure_level: "none"</span
                 >
               </div>
-              <div class="gate" style="--tone: var(--crit)">
+              <div class="gate" style="--tone: var(--betterleaks)">
                 <h4>Betterleaks</h4>
                 <p>Fails when any secret is detected.</p>
                 <span class="off"
@@ -1668,6 +1795,12 @@
                 ><span class="d">Teste de contrato entre as duas fachadas</span>
               </div>
               <div class="row">
+                <span class="f">scripts/render-docs.sh</span
+                ><span class="d"
+                  >Preenche as versões deste guia a partir do VERSION</span
+                >
+              </div>
+              <div class="row">
                 <span class="f">scripts/validate-templates.py</span
                 ><span class="d"
                   >Validação estrutural dos templates GitLab</span
@@ -1807,6 +1940,12 @@
                 ><span class="d">Contract test between the two front ends</span>
               </div>
               <div class="row">
+                <span class="f">scripts/render-docs.sh</span
+                ><span class="d"
+                  >Fills this guide's versions in from VERSION</span
+                >
+              </div>
+              <div class="row">
                 <span class="f">scripts/validate-templates.py</span
                 ><span class="d"
                   >Structural validation of the GitLab templates</span
@@ -1878,7 +2017,9 @@
     NOTE: version references shaped like name@vX.Y.Z are wrapped in
     <!- -email_off- -> below. Cloudflare proxies tooark.com and its Email
     Address Obfuscation rewrites them into "[email protected]" links.
-    Keep the wrappers when bumping the version.
+    The version itself is a placeholder that scripts/render-docs.sh fills in
+    from VERSION, but the published page still reads name@vX.Y.Z, so the
+    wrappers stay.
   -->
         <!-- ============ 05 ============ -->
         <section id="github">
@@ -1893,7 +2034,8 @@
             <p>
               Quando alguém escreve
               <code
-                ><!--email_off-->uses: Tooark/ci-security-scanner@v1.1.0<!--/email_off--></code
+                ><!--email_off-->uses:
+                Tooark/ci-security-scanner@v{{COMPONENT_VERSION}}<!--/email_off--></code
               >, o GitHub baixa este repositório e executa os passos declarados
               aqui <em>dentro do job de quem chamou</em>. O arquivo tem quatro
               blocos.
@@ -1940,7 +2082,7 @@
               </li>
               <li>
                 <strong>Restore the Trivy database</strong> —
-                <code>actions/cache/restore@v4</code>.
+                <code>actions/cache/restore@v6</code>.
               </li>
               <li>
                 <strong>scan</strong> — chama
@@ -1991,7 +2133,8 @@
             <p>
               When someone writes
               <code
-                ><!--email_off-->uses: Tooark/ci-security-scanner@v1.1.0<!--/email_off--></code
+                ><!--email_off-->uses:
+                Tooark/ci-security-scanner@v{{COMPONENT_VERSION}}<!--/email_off--></code
               >, GitHub downloads this repository and runs the steps declared
               here <em>inside the caller's job</em>. The file has four blocks.
             </p>
@@ -2125,7 +2268,7 @@
 
             <pre><code><span class="c"># no .gitlab-ci.yml do projeto que quer ser escaneado</span>
 <span class="k">include:</span>
-  - <span class="k">remote:</span> "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.1.0/templates/full-scan.yml"
+  - <span class="k">remote:</span> "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v{{COMPONENT_VERSION}}/templates/full-scan.yml"
     <span class="k">inputs:</span>
       <span class="k">stage:</span> security
       <span class="k">image:</span> "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
@@ -2212,7 +2355,7 @@
 
             <pre><code><span class="c"># in the .gitlab-ci.yml of the project to be scanned</span>
 <span class="k">include:</span>
-  - <span class="k">remote:</span> "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v1.1.0/templates/full-scan.yml"
+  - <span class="k">remote:</span> "https://raw.githubusercontent.com/Tooark/ci-security-scanner/v{{COMPONENT_VERSION}}/templates/full-scan.yml"
     <span class="k">inputs:</span>
       <span class="k">stage:</span> security
       <span class="k">image:</span> "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
@@ -2266,7 +2409,7 @@
           <div lang="pt-BR">
             <h2>O motor: <code>src/run-scanner.sh</code></h2>
             <p class="deck">
-              246 linhas de bash que traduzem ~40 variáveis
+              Umas 280 linhas de bash que traduzem ~40 variáveis
               <code>ARK_IN_*</code> em um <code>docker run</code>. Quase todo
               comentário nele documenta um bug que alguém já sofreu.
             </p>
@@ -2336,7 +2479,7 @@
                   font-size="11"
                   fill="var(--ink-2)"
                 >
-                  <!--email_off-->uses: ...@v1.1.0<!--/email_off-->
+                  <!--email_off-->uses: ...@v{{COMPONENT_VERSION}}<!--/email_off-->
                 </text>
                 <text
                   x="90"
@@ -2683,6 +2826,19 @@
             </div>
 
             <p>
+              <strong>Diz à imagem quem ela é.</strong> O relatório registra
+              qual imagem fez o scan, mas a imagem só conhece a própria versão
+              de build. O nome e a tag com que ela rodou — um mirror, a tag
+              flutuante <code>{{SCANNER_VERSION}}</code> — e o digest que essa
+              tag resolveu, só quem chama sabe. O script passa
+              <code>ARK_IMAGE_NAME</code>, <code>ARK_IMAGE_TAG</code> e
+              <code>ARK_IMAGE_DIGEST</code>, e o relatório passa a apontar para
+              <code>nome@sha256:…</code>, que é imutável. No GitLab os templates
+              passam nome e tag; o digest só vem por variável de CI/CD, porque o
+              GitLab não expõe o digest da imagem do job.
+            </p>
+
+            <p>
               <strong>Monta os argumentos por comando.</strong> Cada um dos sete
               tem uma forma diferente. Um exemplo de cuidado com usabilidade: em
               <code>full-scan</code>, se você não passou imagem nenhuma, o
@@ -2702,7 +2858,7 @@
           <div lang="en">
             <h2>The engine: <code>src/run-scanner.sh</code></h2>
             <p class="deck">
-              246 lines of bash that translate ~40
+              About 280 lines of bash that translate ~40
               <code>ARK_IN_*</code> variables into a <code>docker run</code>.
               Almost every comment in it documents a bug someone already hit.
             </p>
@@ -2771,7 +2927,7 @@
                   font-size="11"
                   fill="var(--ink-2)"
                 >
-                  <!--email_off-->uses: ...@v1.1.0<!--/email_off-->
+                  <!--email_off-->uses: ...@v{{COMPONENT_VERSION}}<!--/email_off-->
                 </text>
                 <text
                   x="90"
@@ -3115,6 +3271,19 @@
             </div>
 
             <p>
+              <strong>Tells the image who it is.</strong> The report records
+              which image ran the scan, but the image only knows its own build
+              version. The name and tag it ran under — a mirror, the floating
+              <code>{{SCANNER_VERSION}}</code> tag — and the digest that tag
+              resolved to are known only to the caller. The script passes
+              <code>ARK_IMAGE_NAME</code>, <code>ARK_IMAGE_TAG</code> and
+              <code>ARK_IMAGE_DIGEST</code>, and the report then points at
+              <code>name@sha256:…</code>, which is immutable. On GitLab the
+              templates pass the name and tag; the digest can only come from a
+              CI/CD variable, because GitLab exposes no digest for a job image.
+            </p>
+
+            <p>
               <strong>Builds the arguments per command.</strong> Each of the
               seven has a different shape. One example of care for usability: in
               <code>full-scan</code>, if you passed no image at all, the script
@@ -3143,25 +3312,34 @@
 
             <h3>O problema</h3>
             <p>
-              A mesma versão do scanner aparece em <strong>dez lugares</strong>:
-              sete templates, o <code>action.yml</code> e dois fallbacks dentro
-              do <code>run-scanner.sh</code>. Atualizar de <code>1.9</code> para
-              <code>2.0</code> e esquecer um template significa um projeto
-              rodando versão antiga silenciosamente. YAML não tem compilador;
-              ninguém percebe.
+              A mesma versão do scanner aparece em
+              <strong>nove lugares</strong>: sete templates, o
+              <code>action.yml</code> e o fallback dentro do
+              <code>run-scanner.sh</code>. Atualizar de
+              <code>{{SCANNER_VERSION}}</code> para <code>2.0</code> e esquecer
+              um template significa um projeto rodando versão antiga
+              silenciosamente. YAML não tem compilador; ninguém percebe.
             </p>
 
             <h3>A solução</h3>
             <p>O <code>VERSION</code> é a constante única:</p>
 
             <pre><code><span class="c"># Single source of truth for versions in this repository.</span>
-COMPONENT_VERSION=1.1.0
-SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.9</code></pre>
+COMPONENT_VERSION={{COMPONENT_VERSION}}
+SCANNER_IMAGE={{SCANNER_IMAGE}}
+SCANNER_VERSION={{SCANNER_VERSION}}
+REPORT_SCHEMA={{REPORT_SCHEMA}}
+REPORT_VERSION={{REPORT_VERSION}}</code></pre>
+
+            <p>
+              Até este guia sai dele: as versões que você lê nesta página são
+              preenchidas a partir do <code>VERSION</code> pelo
+              <code>scripts/render-docs.sh</code>, no deploy.
+            </p>
 
             <p>
               E o <code>scripts/check-sync.sh</code> é o teste de contrato que
-              falha o CI quando algo diverge. Ele verifica três invariantes:
+              falha o CI quando algo diverge. Ele verifica quatro invariantes:
             </p>
 
             <ol>
@@ -3176,6 +3354,11 @@ SCANNER_VERSION=1.9</code></pre>
               <li>
                 Todo <code>ARK_IN_*</code> definido no <code>action.yml</code> é
                 encaminhado pelo <code>run-scanner.sh</code>.
+              </li>
+              <li>
+                Toda referência de copiar e colar nos docs e nos exemplos pina
+                <code>COMPONENT_VERSION</code>, e toda menção ao envelope do
+                relatório cita <code>REPORT_VERSION</code>.
               </li>
             </ol>
 
@@ -3225,7 +3408,7 @@ SCANNER_VERSION=1.9</code></pre>
 
 python3 scripts/validate-templates.py
 ./scripts/check-sync.sh
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
+shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh</code></pre>
           </div>
 
           <div lang="en">
@@ -3237,21 +3420,29 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
 
             <h3>The problem</h3>
             <p>
-              The same scanner version appears in <strong>ten places</strong>:
-              seven templates, <code>action.yml</code> and two fallbacks inside
-              <code>run-scanner.sh</code>. Updating from <code>1.9</code> to
-              <code>2.0</code> and forgetting one template means a project
-              silently running the old version. YAML has no compiler; nobody
-              notices.
+              The same scanner version appears in <strong>nine places</strong>:
+              seven templates, <code>action.yml</code> and the fallback inside
+              <code>run-scanner.sh</code>. Updating from
+              <code>{{SCANNER_VERSION}}</code> to <code>2.0</code> and
+              forgetting one template means a project silently running the old
+              version. YAML has no compiler; nobody notices.
             </p>
 
             <h3>The solution</h3>
             <p><code>VERSION</code> is the single constant:</p>
 
             <pre><code><span class="c"># Single source of truth for versions in this repository.</span>
-COMPONENT_VERSION=1.1.0
-SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.9</code></pre>
+COMPONENT_VERSION={{COMPONENT_VERSION}}
+SCANNER_IMAGE={{SCANNER_IMAGE}}
+SCANNER_VERSION={{SCANNER_VERSION}}
+REPORT_SCHEMA={{REPORT_SCHEMA}}
+REPORT_VERSION={{REPORT_VERSION}}</code></pre>
+
+            <p>
+              Even this guide comes out of it: the versions you read on this
+              page are filled in from <code>VERSION</code> by
+              <code>scripts/render-docs.sh</code> at deploy time.
+            </p>
 
             <p>
               And <code>scripts/check-sync.sh</code> is the contract test that
@@ -3274,7 +3465,8 @@ SCANNER_VERSION=1.9</code></pre>
               </li>
               <li>
                 Every copy-paste reference in the docs and the examples pins
-                <code>COMPONENT_VERSION</code>.
+                <code>COMPONENT_VERSION</code>, and every mention of the report
+                envelope names <code>REPORT_VERSION</code>.
               </li>
             </ol>
 
@@ -3326,7 +3518,7 @@ SCANNER_VERSION=1.9</code></pre>
 
 python3 scripts/validate-templates.py
 ./scripts/check-sync.sh
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
+shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh</code></pre>
           </div>
         </section>
 
@@ -3403,18 +3595,18 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><code>v1.0.0</code></td>
+                    <td><code>v{{COMPONENT_VERSION}}</code></td>
                     <td>Exatamente aquele release</td>
                     <td>Pipeline reproduzível</td>
                   </tr>
                   <tr>
-                    <td><code>v1.0</code></td>
-                    <td>Último patch da linha 1.0</td>
+                    <td><code>v{{COMPONENT_MINOR}}</code></td>
+                    <td>Último patch da linha {{COMPONENT_MINOR}}</td>
                     <td>Patches automáticos</td>
                   </tr>
                   <tr>
-                    <td><code>v1</code></td>
-                    <td>Último release da linha 1.x</td>
+                    <td><code>v{{COMPONENT_MAJOR}}</code></td>
+                    <td>Último release da linha {{COMPONENT_MAJOR}}.x</td>
                     <td>Minors e patches automáticos</td>
                   </tr>
                   <tr>
@@ -3428,9 +3620,10 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
 
             <p>
               É a convenção do ecossistema de Actions —
-              <code>actions/checkout@v4</code> funciona assim. O README é
-              honesto sobre o custo: pinar <code>v1</code> significa rodar,
-              depois do próximo release, código que você não revisou.
+              <code>actions/checkout@v7</code> funciona assim. O README é
+              honesto sobre o custo: pinar <code>v{{COMPONENT_MAJOR}}</code>
+              significa rodar, depois do próximo release, código que você não
+              revisou.
             </p>
 
             <h3><code>dependabot.yml</code></h3>
@@ -3515,18 +3708,18 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><code>v1.1.0</code></td>
+                    <td><code>v{{COMPONENT_VERSION}}</code></td>
                     <td>Exactly that release</td>
                     <td>Reproducible pipelines</td>
                   </tr>
                   <tr>
-                    <td><code>v1.1</code></td>
-                    <td>Newest patch of the 1.1 line</td>
+                    <td><code>v{{COMPONENT_MINOR}}</code></td>
+                    <td>Newest patch of the {{COMPONENT_MINOR}} line</td>
                     <td>Automatic patch updates</td>
                   </tr>
                   <tr>
-                    <td><code>v1</code></td>
-                    <td>Newest release of the 1.x line</td>
+                    <td><code>v{{COMPONENT_MAJOR}}</code></td>
+                    <td>Newest release of the {{COMPONENT_MAJOR}}.x line</td>
                     <td>Automatic minor and patch updates</td>
                   </tr>
                   <tr>
@@ -3541,8 +3734,8 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
             <p>
               It is the Actions ecosystem convention —
               <code>actions/checkout@v7</code> works this way. The README is
-              honest about the cost: pinning <code>v1</code> means running code
-              you have not reviewed after the next release.
+              honest about the cost: pinning <code>v{{COMPONENT_MAJOR}}</code>
+              means running code you have not reviewed after the next release.
             </p>
 
             <h3><code>dependabot.yml</code></h3>
@@ -3920,7 +4113,10 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
                     <td>Documentação executável</td>
                   </tr>
                   <tr>
-                    <td>Tags <code>v1.0.0</code> / <code>v1</code></td>
+                    <td>
+                      Tags <code>v{{COMPONENT_VERSION}}</code> /
+                      <code>v{{COMPONENT_MAJOR}}</code>
+                    </td>
                     <td>SemVer + alias de linha</td>
                   </tr>
                   <tr>
@@ -3968,8 +4164,8 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
             </div>
 
             <p class="closer">
-              Guia de onboarding · Tooark/ci-security-scanner v1.1.0 · scanner
-              1.9<br />
+              Guia de onboarding · Tooark/ci-security-scanner
+              v{{COMPONENT_VERSION}} · scanner {{SCANNER_VERSION}}<br />
               A referência autoritativa de cada input é o bloco
               <code>spec:inputs</code> do template correspondente.
             </p>
@@ -4030,7 +4226,10 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
                     <td>Executable documentation</td>
                   </tr>
                   <tr>
-                    <td>Tags <code>v1.1.0</code> / <code>v1</code></td>
+                    <td>
+                      Tags <code>v{{COMPONENT_VERSION}}</code> /
+                      <code>v{{COMPONENT_MAJOR}}</code>
+                    </td>
                     <td>SemVer + line alias</td>
                   </tr>
                   <tr>
@@ -4079,8 +4278,8 @@ shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh</code></pre>
             </div>
 
             <p class="closer">
-              Onboarding guide · Tooark/ci-security-scanner v1.1.0 · scanner
-              1.9<br />
+              Onboarding guide · Tooark/ci-security-scanner
+              v{{COMPONENT_VERSION}} · scanner {{SCANNER_VERSION}}<br />
               The authoritative reference for every input is the
               <code>spec:inputs</code> block of the matching template.
             </p>

@@ -1,3 +1,4 @@
 scan-reports/
 .cache/
+_site/
 *.log

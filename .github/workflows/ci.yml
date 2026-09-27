@@ -49,7 +49,7 @@ jobs:
         run: bash scripts/check-sync.sh
 
       - name: ShellCheck
-        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh
+        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
 
       # Pinned by digest: a third-party image runs with this job's context, and
       # a mutable tag would let it change without a commit here. This is
