@@ -26,7 +26,7 @@ WORKSPACE="${ARK_WORKSPACE:-${GITHUB_WORKSPACE:-$PWD}}"
 
 COMMAND="${ARK_COMMAND:-full-scan}"
 SCANNER_IMAGE="${ARK_SCANNER_IMAGE:-ghcr.io/tooark/security-scanner}"
-SCANNER_VERSION="${ARK_SCANNER_VERSION:-1.9}"
+SCANNER_VERSION="${ARK_SCANNER_VERSION:-1.10}"
 REPORTS_DIR="${ARK_REPORTS_DIR:-scan-reports}"
 
 case "$COMMAND" in
@@ -143,6 +143,38 @@ for gh_var in GITHUB_ACTIONS GITHUB_REF_NAME GITHUB_HEAD_REF GITHUB_SHA GITHUB_R
   fi
 done
 
+# Scanner identity, for the report's `image` object. The image records its own
+# build version, but only the caller knows the name and tag it was run under —
+# a mirror, a floating tag — and the digest that tag resolved to. The job env
+# still wins over all three.
+IMAGE_REF="${SCANNER_IMAGE}:${SCANNER_VERSION}"
+
+# Pull only when the image is missing, as `docker run` would, so the digest read
+# below is the one that runs. A failed pull is left for `docker run` to report,
+# where soft-fail still applies to it.
+if ! docker image inspect "$IMAGE_REF" >/dev/null 2>&1; then
+  docker pull --quiet "$IMAGE_REF" >/dev/null || true
+fi
+
+# RepoDigests holds name@sha256:<digest> per repository the image was pulled
+# from; the envelope wants the bare sha256:<digest> of this one. A locally built
+# image has none, and the digest is then left out.
+IMAGE_DIGEST="${ARK_IMAGE_DIGEST:-}"
+if [ -z "$IMAGE_DIGEST" ]; then
+  while IFS= read -r repo_digest; do
+    case "$repo_digest" in
+      "$SCANNER_IMAGE"@sha256:*)
+        IMAGE_DIGEST="${repo_digest#*@}"
+        break
+        ;;
+    esac
+  done < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAGE_REF" 2>/dev/null || true)
+fi
+
+add_env "ARK_IMAGE_NAME" "${ARK_IMAGE_NAME:-$SCANNER_IMAGE}"
+add_env "ARK_IMAGE_TAG" "${ARK_IMAGE_TAG:-$SCANNER_VERSION}"
+add_env "ARK_IMAGE_DIGEST" "$IMAGE_DIGEST"
+
 # -----------------------------------------------------------------------------
 # ark-tools arguments.
 # -----------------------------------------------------------------------------
@@ -210,7 +242,6 @@ fi
 # -----------------------------------------------------------------------------
 # Run.
 # -----------------------------------------------------------------------------
-IMAGE_REF="${SCANNER_IMAGE}:${SCANNER_VERSION}"
 log "image:   $IMAGE_REF"
 log "command: ark-tools ${ARGS[*]}"
 

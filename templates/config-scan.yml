@@ -22,7 +22,7 @@ spec:
       default: "ghcr.io/tooark/security-scanner"
       description: "Scanner image repository."
     scanner_version:
-      default: "1.9"
+      default: "1.10"
       description: "Scanner image tag. Pin it; latest makes pipelines non-reproducible."
     allow_failure:
       type: boolean
@@ -105,6 +105,12 @@ spec:
   variables:
     TRIVY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/trivy"
     REPORT_DIR: "$CI_PROJECT_DIR/$[[ inputs.reports_dir ]]"
+    # The report's `image` object names the image that ran the scan. The image
+    # records its own build version; the name and tag it ran under are known
+    # only here. A project CI/CD variable still overrides both, and is the only
+    # way to record ARK_IMAGE_DIGEST: GitLab exposes no digest for a job image.
+    ARK_IMAGE_NAME: "$[[ inputs.scanner_image ]]"
+    ARK_IMAGE_TAG: "$[[ inputs.scanner_version ]]"
     # Inputs are staged as ARK_IN_* and only exported when non-empty, so an empty
     # input never clobbers a variable the project set globally.
     ARK_IN_PATH: "$[[ inputs.path ]]"

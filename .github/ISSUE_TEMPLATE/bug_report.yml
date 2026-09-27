@@ -65,7 +65,7 @@ body:
     attributes:
       label: Scanner image tag
       description: Leave the default unless you overrode scanner_version / scanner-version.
-      placeholder: "e.g., ghcr.io/tooark/security-scanner:1.9"
+      placeholder: "e.g., ghcr.io/tooark/security-scanner:1.10"
     validations:
       required: true
 

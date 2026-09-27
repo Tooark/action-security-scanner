@@ -72,7 +72,7 @@ inputs:
   scanner-version:
     description: "Scanner image tag. Pin it; latest makes workflows non-reproducible."
     required: false
-    default: "1.9"
+    default: "1.10"
 
   # --- sbom -------------------------------------------------------------------
   sbom:

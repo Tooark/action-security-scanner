@@ -15,7 +15,7 @@ filled in; the `bug` template asks for exactly the fields this page indexes.
 
 | Platform                               | How it is consumed                          | Status         |
 | -------------------------------------- | ------------------------------------------- | -------------- |
-| **GitHub Actions**                     | `uses: Tooark/ci-security-scanner@v1.1.0`   | ✅ Supported   |
+| **GitHub Actions**                     | `uses: Tooark/ci-security-scanner@v1.2.0`   | ✅ Supported   |
 | **GitLab CI — remote include**         | `include: - remote: ".../templates/*.yml"`  | ✅ Supported   |
 | **GitLab CI — CI/CD Catalog**          | `include: - component: $CI_SERVER_FQDN/...` | ✅ Supported   |
 | **Direct invocation**                  | `docker run` / `src/run-scanner.sh`         | ⚠️ Best effort |
@@ -103,9 +103,10 @@ with the default shallow clone it sees almost nothing **and does not complain**.
 
 ## Versions
 
-| Component version | Scanner image                         | Status  |
-| ----------------- | ------------------------------------- | ------- |
-| `1.x`             | `ghcr.io/tooark/security-scanner:1.9` | Current |
+| Component version   | Scanner image                          | Status     |
+| ------------------- | -------------------------------------- | ---------- |
+| `1.2.x`             | `ghcr.io/tooark/security-scanner:1.10` | Current    |
+| `1.0.x` and `1.1.x` | `ghcr.io/tooark/security-scanner:1.9`  | Superseded |
 
 [`VERSION`](VERSION) is the single source of truth for this pairing, and
 `scripts/check-sync.sh` fails CI when any template or the Action drifts from
@@ -143,7 +144,9 @@ remote include — but the combination is untested.
 
 Report formats, SBOM formats and the consolidated `ark-report-tools` envelope
 are produced by the image, not by this component. The component forwards the
-format inputs and uploads whatever lands in the reports directory.
+format inputs, tells the image the name, tag and — on GitHub — digest it ran
+under, which fill the envelope's `image` object, and uploads whatever lands in
+the reports directory.
 
 The authoritative list of supported values for `trivy_format`,
 `hadolint_format`, `betterleaks_format` and `sbom_format` is the `options:`

@@ -55,6 +55,7 @@ Rule of thumb:
 | The job fails before `ark-tools` runs                       | here             |
 | A scan finds the wrong thing, or a tool flag is unsupported | `base-images`    |
 | The report format or the consolidated envelope is wrong     | `base-images`    |
+| The report's `image` object names the wrong image           | here             |
 
 ---
 
@@ -85,7 +86,7 @@ Full policy and response targets are in [`SECURITY.md`](SECURITY.md).
 
 | Audience                | Start here                                                         |
 | ----------------------- | ------------------------------------------------------------------ |
-| **New to CI pipelines** | [Onboarding guide](https://tooark.com/ci-security-scanner/)  |
+| **New to CI pipelines** | [Onboarding guide](https://tooark.com/ci-security-scanner/)        |
 | **Users**               | [README.md](README.md) · [README.pt-BR.md](README.pt-BR.md)        |
 | **Every input**         | The `spec:inputs` block of each file in [`templates/`](templates/) |
 | **Support boundaries**  | [SUPPORTED-INTEGRATIONS.md](SUPPORTED-INTEGRATIONS.md)             |
