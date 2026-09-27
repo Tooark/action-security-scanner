@@ -20,6 +20,10 @@ GitHub stays the source of truth. Nothing is authored here.
 Re-running `sync` when nothing changed is a no-op, so the schedule can be as
 aggressive as you like.
 
+The `release` job runs `glab`, which the `release` keyword uses on GitLab 18.0
+and later. On an older instance, switch its image to
+`registry.gitlab.com/gitlab-org/release-cli`.
+
 ## One-time setup
 
 1. **Create the project** on your GitLab instance, for example
@@ -41,8 +45,12 @@ aggressive as you like.
    sync — there is no need to copy them by hand.
 
 3. **Mark it as a catalog resource**: _Settings > General > Visibility, project
-   features, permissions_ and turn on **CI/CD Catalog project**. The project
-   becomes findable only after the first release is published.
+   features, permissions_ and turn on **CI/CD Catalog project** (Owner role).
+   The project becomes findable only after the first release is published.
+
+   Do this before the first tag pipeline runs. The `release` job publishes to
+   the catalog only when the toggle is already on; turning it on afterwards
+   does not publish releases that already exist.
 
 4. **Create a project access token** with the `write_repository` scope and the
    Maintainer role, so the `sync` job can push commits and tags. Add it under
@@ -72,7 +80,7 @@ Once the first release lands, projects on the instance include it by path:
 
 ```yaml
 include:
-  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.1.0
+  - component: $CI_SERVER_FQDN/tooark/ci-security-scanner/full-scan@1.2.0
     inputs:
       image: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
       trivy_severity: "CRITICAL,HIGH"
@@ -89,9 +97,11 @@ becomes catalog version `1.2.3`.
 
 ## When a sync goes wrong
 
-| Symptom                                          | Cause                                                                          |
-| ------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `CATALOG_PUSH_TOKEN is not set`                  | The CI/CD variable is missing, or it is protected and the branch is not        |
-| `remote: You are not allowed to push code`       | The token's user lacks push rights on the protected branch or tag              |
-| The release job runs but the catalog stays empty | The **CI/CD Catalog project** toggle is off, or the project has no description |
-| `API rate limit exceeded`                        | Set `UPSTREAM_TOKEN` to a GitHub token                                         |
+| Symptom                                                          | Cause                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CATALOG_PUSH_TOKEN is not set`                                  | The CI/CD variable is missing, or it is protected and the branch is not                                                                                                                                                                                                                                                  |
+| `remote: You are not allowed to push code to this project` (403) | The push authenticated as something that cannot push. The runner rewrites the bare project URL to one carrying `CI_JOB_TOKEN`, which is read-only; the pipeline avoids that by pushing to an `oauth2@` URL, so check that was not changed. Otherwise the token lacks the `write_repository` scope or the Maintainer role |
+| `You are not allowed to push code to protected branches`         | The token's user lacks push rights on the default branch, or _Protected tags_ do not let it create tags                                                                                                                                                                                                                  |
+| The release job succeeds but the catalog stays empty             | The **CI/CD Catalog project** toggle was off when the job ran. Turn it on, delete the release (_Deploy > Releases_) and retry the `release` job; it runs `glab` with `--no-update`, so it fails while the release exists                                                                                                 |
+| The release job fails with `Project must have a description`     | Set the description under _Settings > General_ and retry the job. `Project must have a README` and `Project must contain components` mean the tagged commit lacks `README.md` or `templates/`                                                                                                                            |
+| `API rate limit exceeded`                                        | Set `UPSTREAM_TOKEN` to a GitHub token                                                                                                                                                                                                                                                                                   |

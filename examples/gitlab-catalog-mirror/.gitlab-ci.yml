@@ -30,7 +30,10 @@ variables:
 # -----------------------------------------------------------------------------
 sync:
   stage: sync
-  image: alpine:3.20
+  # Pinned by digest: this job holds CATALOG_PUSH_TOKEN. To bump, pick a
+  # supported release (https://alpinelinux.org/releases/) and resolve its
+  # digest with: docker buildx imagetools inspect alpine:<version>
+  image: alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
@@ -102,15 +105,28 @@ sync:
       # URL, so it never lands in argv (readable through /proc by anything else
       # on the runner) nor in a URL that git can echo back in an error. The
       # single quotes matter: git expands the variable when it calls the helper.
-      remote="https://${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-      git config credential.helper \
-        '!f() { echo "username=oauth2"; echo "password=${CATALOG_PUSH_TOKEN}"; }; f'
+      # The empty helper in front drops any helper configured earlier, such as
+      # the CI_JOB_TOKEN one the runner installs with FF_GIT_URLS_WITHOUT_TOKENS.
+      push() {
+        git -c credential.helper= \
+          -c credential.helper='!f() { echo "username=oauth2"; echo "password=${CATALOG_PUSH_TOKEN}"; }; f' \
+          push "$@"
+      }
 
-      git push "$remote" "HEAD:${CI_DEFAULT_BRANCH}"
+      # The runner rewrites the bare project URL to one carrying CI_JOB_TOKEN
+      # (url.<with token>.insteadOf <without>), and the job token cannot push.
+      # insteadOf matches the start of the URL, so the user part keeps this one
+      # out of the rewrite.
+      remote="https://oauth2@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+
+      # ci.skip: without it this push starts a branch pipeline whose own sync
+      # job races the tag push below, and fails trying to create the same tag
+      # when it wins. The tag push must not skip CI: its pipeline publishes.
+      push -o ci.skip "$remote" "HEAD:${CI_DEFAULT_BRANCH}"
 
       # Pushing the tag starts the pipeline that runs the release job below.
       git tag -a "$version" -m "ci-security-scanner ${version} (upstream ${upstream_tag})"
-      git push "$remote" "refs/tags/${version}"
+      push "$remote" "refs/tags/${version}"
 
       echo "== published tag $version; the release job takes it from here =="
 
@@ -120,9 +136,11 @@ sync:
 # -----------------------------------------------------------------------------
 release:
   stage: release
-  # A mutable tag on an image that runs in a job holding a push token. Pin it to
-  # a digest (docker buildx imagetools inspect <image>) once you have vetted one.
-  image: registry.gitlab.com/gitlab-org/cli:latest
+  # glab >= 1.58.0 runs the release keyword on GitLab 18.0+ (release-cli is
+  # deprecated and goes away in 20.0). Pinned by digest; to bump, pick a release
+  # from https://gitlab.com/gitlab-org/cli/-/releases and resolve its digest
+  # with: docker buildx imagetools inspect registry.gitlab.com/gitlab-org/cli:<tag>
+  image: registry.gitlab.com/gitlab-org/cli:v1.119.0@sha256:79223ad3fa6e3c3226119ac5d0b73e55f1b909e6d5bbf8469726480723b63ba8
   rules:
     - if: $CI_COMMIT_TAG
   script:
