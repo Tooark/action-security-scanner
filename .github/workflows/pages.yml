@@ -55,7 +55,7 @@ jobs:
       - name: Render the guide
         run: bash scripts/render-docs.sh _site
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
