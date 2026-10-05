@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Guards the invariants that keep the GitLab templates and the GitHub Action
-# interchangeable, and the documentation honest:
+# Guards the invariants that keep the Action and its documentation honest:
 #
-#   1. every artifact pins exactly the scanner image declared in VERSION;
-#   2. every ARK_IN_* an artifact sets is actually consumed downstream;
-#   3. every copy-paste reference in the docs pins COMPONENT_VERSION, every
+#   1. action.yml and src/run-scanner.sh pin exactly the scanner image declared
+#      in VERSION;
+#   2. every input action.yml declares is read by one of its steps, and every
+#      ARK_IN_* it stages is consumed by src/run-scanner.sh -- and the other
+#      way round;
+#   3. every input is documented in both READMEs;
+#   4. every copy-paste reference in the docs pins COMPONENT_VERSION, every
 #      mention of the report envelope names REPORT_VERSION, and the onboarding
 #      guide takes all of its versions from VERSION.
 #
@@ -17,6 +20,10 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+# What a consumer types after `uses:`. A repository rename is an edit here, and
+# the checks below then flag every reference that still carries the old name.
+ACTION_REPO="Tooark/action-security-scanner"
 
 failures=0
 ok() { printf '  ok   %s\n' "$*"; }
@@ -64,15 +71,11 @@ echo "VERSION pins ${SCANNER_IMAGE}:${SCANNER_VERSION}"
 echo
 echo "1. image pinning"
 
-for template in templates/*.yml; do
-  expect_pin "$template scanner_image" "$(default_after "$template" scanner_image)" "$SCANNER_IMAGE"
-  expect_pin "$template scanner_version" "$(default_after "$template" scanner_version)" "$SCANNER_VERSION"
-done
-
 expect_pin "action.yml scanner-image" "$(default_after action.yml scanner-image)" "$SCANNER_IMAGE"
 expect_pin "action.yml scanner-version" "$(default_after action.yml scanner-version)" "$SCANNER_VERSION"
 
 # The runner script carries its own fallbacks for direct invocation.
+action="$(cat action.yml)"
 runner="$(cat src/run-scanner.sh)"
 
 if [[ $runner == *"ARK_SCANNER_IMAGE:-${SCANNER_IMAGE}}"* ]]; then
@@ -87,10 +90,30 @@ else
   fail "src/run-scanner.sh scanner version fallback does not match '$SCANNER_VERSION'"
 fi
 
+# A literal backtick, spelled so that no quoting below ever has to escape one.
+tick="$(printf '\140')"
+
+# The default is also quoted where a reader looks it up: the scanner-version
+# row of each README, and the row of the support matrix marked Current.
+for readme in README.md README.pt-BR.md; do
+  row="$(grep -E "^\| ${tick}scanner-version${tick}" "$readme" || true)"
+  if [[ $row == *"${tick}${SCANNER_VERSION}${tick}"* ]]; then
+    ok "$readme scanner-version row"
+  else
+    fail "$readme does not give '$SCANNER_VERSION' as the default of scanner-version"
+  fi
+done
+
+current="$(grep -E '\| Current[[:space:]]*\|' SUPPORTED-INTEGRATIONS.md || true)"
+if [[ $current == *"${tick}${SCANNER_IMAGE}:${SCANNER_VERSION}${tick}"* ]]; then
+  ok "SUPPORTED-INTEGRATIONS.md current pairing"
+else
+  fail "SUPPORTED-INTEGRATIONS.md does not pair the Current line with ${SCANNER_IMAGE}:${SCANNER_VERSION}"
+fi
+
 # -----------------------------------------------------------------------------
 # Lists the bare variable names passed to a forwarding helper, following
-# backslash continuations. Used for both ark_apply_inputs (templates) and
-# add_env_from_input (runner script).
+# backslash continuations.
 # -----------------------------------------------------------------------------
 forwarded_names() {
   awk -v fn="$2" '
@@ -111,60 +134,85 @@ forwarded_names() {
   ' "$1" | sort -u
 }
 
-echo
-echo "2. ARK_IN_* wiring in templates"
+# -----------------------------------------------------------------------------
+# Lists the inputs action.yml declares: the two-space keys between the
+# top-level `inputs:` and the next top-level key.
+# -----------------------------------------------------------------------------
+declared_inputs() {
+  awk '
+    /^inputs:/ { inblock = 1; next }
+    /^[a-z]/ { inblock = 0 }
+    inblock && /^  [a-z][a-z0-9-]*:[ \t]*$/ {
+      sub(/:.*/, "")
+      gsub(/ /, "")
+      print
+    }
+  ' action.yml
+}
 
-for template in templates/*.yml; do
-  content="$(cat "$template")"
-  declared="$(grep -oE '^[[:space:]]+ARK_IN_[A-Z0-9_]+:' "$template" | tr -d ' :' | sort -u)"
-  used_direct="$(grep -oE 'ARK_IN_[A-Z0-9_]+' "$template" | sort -u)"
-  exported="$(forwarded_names "$template" ark_apply_inputs | sed 's/^/ARK_IN_/')"
-
-  template_ok=1
-
-  # Anything the job script references must be declared under variables:.
-  for name in $used_direct; do
-    if ! has_line "$declared" "$name"; then
-      fail "$template uses $name but never declares it under variables:"
-      template_ok=0
-    fi
-  done
-
-  # Anything declared must be read directly or exported by ark_apply_inputs.
-  for name in $declared; do
-    if has_line "$exported" "$name"; then
-      continue
-    fi
-    if [[ $content == *"\${${name}"* ]]; then
-      continue
-    fi
-    fail "$template declares $name but never reads or exports it"
-    template_ok=0
-  done
-
-  [ "$template_ok" -eq 1 ] && ok "$template"
-done
+inputs="$(declared_inputs)"
+[ -n "$inputs" ] || { echo "could not read any input from action.yml" >&2; exit 1; }
 
 echo
-echo "3. ARK_IN_* wiring between action.yml and src/run-scanner.sh"
+echo "2. input wiring between action.yml and src/run-scanner.sh"
 
-action_ok=1
+# An input nothing reads is a documentation lie: the user sets it, the run
+# succeeds, and nothing happened. The trailing space is what tells `sbom` from
+# `sbom-format`; every expression in action.yml is written `inputs.name `.
+wiring_ok=1
+while read -r name; do
+  if [[ $action != *"inputs.${name} "* ]]; then
+    fail "action.yml declares '$name' but no step reads inputs.$name"
+    wiring_ok=0
+  fi
+done <<<"$inputs"
+[ "$wiring_ok" -eq 1 ] && ok "every input is read by a step"
+
 runner_forwarded="$(forwarded_names src/run-scanner.sh add_env_from_input | sed 's/^/ARK_IN_/')"
+action_staged="$(grep -oE 'ARK_IN_[A-Z0-9_]+' action.yml | sort -u)"
+runner_read="$(grep -oE 'ARK_IN_[A-Z0-9_]+' src/run-scanner.sh | sort -u)"
 
-# Read rather than word-split: process substitution keeps the loop in this
-# shell, so action_ok survives it (a pipe would run the body in a subshell).
+# Read rather than word-split: a here-string keeps the loop in this shell, so
+# the flag survives it (a pipe would run the body in a subshell).
+staged_ok=1
 while read -r name; do
   # Either referenced verbatim, or forwarded as a bare name to add_env_from_input.
-  if [[ $runner == *"$name"* ]]; then
-    continue
-  fi
-  if has_line "$runner_forwarded" "$name"; then
+  if has_line "$runner_read" "$name" || has_line "$runner_forwarded" "$name"; then
     continue
   fi
   fail "action.yml sets $name but src/run-scanner.sh never forwards it"
-  action_ok=0
-done < <(grep -oE 'ARK_IN_[A-Z0-9_]+' action.yml | sort -u)
-[ "$action_ok" -eq 1 ] && ok "action.yml -> src/run-scanner.sh"
+  staged_ok=0
+done <<<"$action_staged"
+[ "$staged_ok" -eq 1 ] && ok "action.yml -> src/run-scanner.sh"
+
+# The other direction: a name the runner reads but the action never stages is
+# always empty, so the branch that reads it is dead.
+read_ok=1
+while read -r name; do
+  [ -n "$name" ] || continue
+  if ! has_line "$action_staged" "$name"; then
+    fail "src/run-scanner.sh reads $name but action.yml never sets it"
+    read_ok=0
+  fi
+done <<<"$runner_read"$'\n'"$runner_forwarded"
+[ "$read_ok" -eq 1 ] && ok "src/run-scanner.sh -> action.yml"
+
+echo
+echo "3. inputs documented in the READMEs"
+
+# action.yml is the reference, but the README is what people read first. An
+# input missing from its tables does not exist as far as they are concerned.
+for readme in README.md README.pt-BR.md; do
+  content="$(cat "$readme")"
+  readme_ok=1
+  while read -r name; do
+    if [[ $content != *"${tick}${name}${tick}"* ]]; then
+      fail "$readme never mentions the input '$name'"
+      readme_ok=0
+    fi
+  done <<<"$inputs"
+  [ "$readme_ok" -eq 1 ] && ok "$readme"
+done
 
 echo
 echo "4. versions quoted in the documentation"
@@ -194,22 +242,17 @@ checked_copy() {
   fi
 }
 
-# Only the three forms a reader copies into their own pipeline. Prose that
-# explains the tagging scheme -- "v1.0.0 is never moved", the table of floating
-# tags -- is illustrative and deliberately not matched.
-VERSION_REF_RE='ci-security-scanner@v[0-9]+\.[0-9]+\.[0-9]+'
-VERSION_REF_RE="$VERSION_REF_RE|ci-security-scanner/v[0-9]+\.[0-9]+\.[0-9]+/"
-VERSION_REF_RE="$VERSION_REF_RE|ci-security-scanner/[a-z-]+@[0-9]+\.[0-9]+\.[0-9]+"
+# Only the form a reader copies into their own workflow. Prose that explains
+# the tagging scheme -- "v1.0.0 is never moved", the table of floating tags --
+# is illustrative and deliberately not matched.
+VERSION_REF_RE="${ACTION_REPO}@v[0-9]+\.[0-9]+\.[0-9]+"
 
 version_ref_files=(
   README.md
   README.pt-BR.md
   SUPPORTED-INTEGRATIONS.md
   docs/index.html
-  examples/github/security-scan.yml
-  examples/gitlab/catalog-component.gitlab-ci.yml
-  examples/gitlab/remote-include.gitlab-ci.yml
-  examples/gitlab-catalog-mirror/README.md
+  examples/*.yml
 )
 
 for file in "${version_ref_files[@]}"; do
@@ -223,9 +266,7 @@ for file in "${version_ref_files[@]}"; do
   while read -r ref; do
     [ -n "$ref" ] || continue
     seen=1
-    # Strip a trailing slash first, then everything up to the last @ or / and
-    # an optional v, leaving the bare version.
-    found="$(printf '%s' "$ref" | sed -E 's#/$##; s#.*[@/]v?##')"
+    found="${ref##*@v}"
     if [ "$found" != "$COMPONENT_VERSION" ]; then
       fail "$file pins $found, expected $COMPONENT_VERSION  ($ref)"
       file_ok=0
@@ -233,22 +274,21 @@ for file in "${version_ref_files[@]}"; do
   done < <(grep -oE "$VERSION_REF_RE" "$(checked_copy "$file")" | sort -u)
 
   if [ "$seen" -eq 0 ]; then
-    fail "$file has no component version reference; restore it or drop the file from the list"
+    fail "$file has no '$ACTION_REPO@vX.Y.Z' reference; restore it or drop the file from the list"
   elif [ "$file_ok" -eq 1 ]; then
     ok "$file"
   fi
 done
 
-# The envelope version is what a collector behind report_url validates against,
+# The envelope version is what a collector behind report-url validates against,
 # so a stale one in the docs sends people to the wrong schema. CHANGELOG.md is
 # history and deliberately not matched.
-REPORT_REF_RE="${REPORT_SCHEMA}\`? (envelope )?v[0-9]+(\.[0-9]+)*"
+REPORT_REF_RE="${REPORT_SCHEMA}${tick}? (envelope )?v[0-9]+(\.[0-9]+)*"
 
 report_ref_files=(
   README.md
   README.pt-BR.md
   docs/index.html
-  templates/full-scan.yml
 )
 
 for file in "${report_ref_files[@]}"; do

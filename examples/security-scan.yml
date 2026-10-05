@@ -1,8 +1,13 @@
 # =============================================================================
-# Consuming ci-security-scanner as a GitHub Action.
+# A complete setup: fast checks on pull requests, the full scan of the image
+# built on the default branch, and an advisory job that never blocks.
 # -----------------------------------------------------------------------------
 # Copy into .github/workflows/ in the project you want to scan.
 # Always pin a tag or a commit SHA.
+#
+# The Action runs more than once here. Every run uploads an artifact, and two
+# artifacts in one workflow run cannot share a name, so each step sets its own
+# `artifact-name`.
 # =============================================================================
 name: Security
 
@@ -31,13 +36,13 @@ jobs:
           fetch-depth: 0
 
       - name: Secret scan
-        uses: Tooark/ci-security-scanner@v1.2.0
+        uses: Tooark/action-security-scanner@v1.3.0
         with:
           command: secret-scan
           artifact-name: secret-scan-reports
 
       - name: Dockerfile lint
-        uses: Tooark/ci-security-scanner@v1.2.0
+        uses: Tooark/action-security-scanner@v1.3.0
         with:
           command: dockerfile-lint
           dockerfile: Dockerfile
@@ -66,7 +71,7 @@ jobs:
 
       - name: Full security scan
         id: scan
-        uses: Tooark/ci-security-scanner@v1.2.0
+        uses: Tooark/action-security-scanner@v1.3.0
         env:
           # Secrets travel through env, never through inputs.
           REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
@@ -101,11 +106,12 @@ jobs:
 
       - name: Filesystem scan
         id: fs
-        uses: Tooark/ci-security-scanner@v1.2.0
+        uses: Tooark/action-security-scanner@v1.3.0
         with:
           command: filesystem-scan
           soft-fail: "true"
           trivy-severity: CRITICAL,HIGH
+          artifact-name: advisory-reports
 
       - name: Comment when the gate would have failed
         if: steps.fs.outputs.exit-code != '0'

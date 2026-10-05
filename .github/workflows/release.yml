@@ -19,14 +19,17 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install --quiet pyyaml
 
-      - name: Validate GitLab component templates
-        run: python3 scripts/validate-templates.py
-
-      - name: Check version pinning and input parity
+      - name: Check version pinning, input wiring and docs
         run: bash scripts/check-sync.sh
 
+      - name: Check the examples against action.yml
+        run: python3 scripts/check-examples.py
+
+      - name: Test the runner script
+        run: bash tests/run-scanner.test.sh
+
       - name: ShellCheck
-        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
+        run: shellcheck -s bash src/run-scanner.sh scripts/*.sh tests/*.sh
 
       # The tag is what downstream consumers pin, so it must agree with the
       # version recorded in the repository.

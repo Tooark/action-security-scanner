@@ -1,15 +1,20 @@
-# Contributing to ci-security-scanner
+# Contributing to action-security-scanner
 
 First off, thank you for considering contributing to
-**Tooark ci-security-scanner**! 🎉
+**Tooark action-security-scanner**! 🎉
 
-This repository publishes one thing twice: the CI configuration that runs the
-Tooark `security-scanner` image, as GitLab CI/CD component templates and as a
-GitHub composite Action. Keeping those two front ends interchangeable is the
-constraint that shapes almost every rule below.
+This repository publishes one thing: the GitHub Action that runs the Tooark
+`security-scanner` image. What it promises a consumer is that every documented
+input does what the documentation says — which is the constraint that shapes
+almost every rule below.
+
+The same scans ship for GitLab CI from a sister repository,
+[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner).
+The two share input names on purpose, so a change to an input here is usually
+worth an issue there.
 
 If you are new to CI pipelines, read the
-[onboarding guide](https://tooark.com/ci-security-scanner/) first — it
+[onboarding guide](https://tooark.com/action-security-scanner/) first — it
 explains what each file does and why.
 
 ## Table of contents
@@ -36,39 +41,40 @@ explains what each file does and why.
   onboarding guide in `docs/` are first-class.
 - 🔒 **Review security** — question a default, a mount, or a place where a
   value could reach a shell.
-- 💻 **Write code** — templates, the Action, the runner script, validation.
+- 💻 **Write code** — the Action, the runner script, the examples, validation.
 
 ---
 
 ## What belongs here and what does not
 
-This component **forwards configuration**; it does not implement scanning.
+This Action **forwards configuration**; it does not implement scanning.
 Trivy, Hadolint, Betterleaks and the `ark-tools` CLI live in the image, built
 from [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/security-scanner).
 
-| Change                                               | Repository    |
-| ---------------------------------------------------- | ------------- |
-| A new input that forwards a variable the image reads | here          |
-| An input behaves differently on GitLab and GitHub    | here          |
-| A job fails before `ark-tools` starts                | here          |
-| A tool needs a flag the image does not expose        | `base-images` |
-| The report format or the consolidated envelope       | `base-images` |
+| Change                                                | Repository                     |
+| ----------------------------------------------------- | ------------------------------ |
+| A new input that forwards a variable the image reads  | here                           |
+| A step fails before `ark-tools` starts                | here                           |
+| The cache, the artifact upload, file ownership        | here                           |
+| A tool needs a flag the image does not expose         | `base-images`                  |
+| The report format or the consolidated envelope        | `base-images`                  |
+| Anything about a GitLab template or the CI/CD Catalog | `template-ci-security-scanner` |
 
-Before proposing a new input, check that it cannot already be done by
-redeclaring the generated GitLab job or setting the matching environment
-variable — a generated job is an ordinary job, and every image variable is
-already forwarded.
+Before proposing a new input, check that it cannot already be done by setting
+the matching environment variable as `env` on the step — the Action passes on
+every variable under the image's prefixes, so an input is a convenience for the
+settings most people touch, not the only way in.
 
 ---
 
 ## Repository layout
 
 ```text
-templates/          GitLab CI/CD component templates, one job each
-action.yml          GitHub composite Action
-src/run-scanner.sh  Shared runner behind the Action
-scripts/            Validation run in CI and locally
-examples/           Ready-to-copy pipelines for both platforms
+action.yml          The composite Action: inputs, outputs, steps
+src/run-scanner.sh  Translates the inputs into a docker run of the image
+examples/           Ready-to-copy workflows
+scripts/            Checks run in CI and locally
+tests/              Tests of the runner script, no Docker needed
 docs/               Onboarding guide, published to GitHub Pages
 VERSION             Single source of truth for versions
 ```
@@ -80,22 +86,37 @@ VERSION             Single source of truth for versions
 ```bash
 python3 -m pip install pyyaml
 
-python3 scripts/validate-templates.py   # structure, input wiring, dead inputs
-./scripts/check-sync.sh                 # version pinning and cross-platform parity
-shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
+./scripts/check-sync.sh               # version pins, input wiring, docs
+python3 scripts/check-examples.py     # examples and README snippets match action.yml
+./tests/run-scanner.test.sh           # the docker run the Action builds, without Docker
+shellcheck -s bash src/run-scanner.sh scripts/*.sh tests/*.sh
 ```
 
-Run all three before opening a PR. CI runs them, plus `actionlint`, plus a
+Run all four before opening a PR. CI runs them, plus `actionlint`, plus a
 self-scan in which the Action in this repository scans this repository.
 
-**Install `shellcheck` locally.** It is the one check with no Python fallback,
-it fails on `info`-level findings, and it is the easiest of the three to
-discover only after CI has turned red.
+**Install `shellcheck` locally.** It fails on `info`-level findings, and it is
+the easiest of the four to discover only after CI has turned red.
 
-`validate-templates.py` exists because GitLab reports these problems only when
-a pipeline is created — which happens in a _consuming_ project, not here. A
-template that references an undeclared input, or declares one it never uses,
-must never reach a tag.
+`tests/run-scanner.test.sh` puts a stand-in `docker` on the `PATH` that records
+the command line instead of running it, then asserts on what
+`src/run-scanner.sh` built. It is where a change to precedence, to what is
+forwarded, or to path rewriting gets its test — none of it needs the image.
+
+To run the Action's script by hand, against any directory, on a machine with
+Docker:
+
+```bash
+ARK_WORKSPACE="$PWD" ARK_COMMAND=secret-scan ARK_IN_NO_GIT=true bash src/run-scanner.sh
+```
+
+Every input is an `ARK_IN_<NAME>` variable there; `action.yml` shows the
+mapping.
+
+`check-examples.py` exists because GitHub does not reject an input the Action
+never declared: the workflow runs, prints a warning nobody reads, and the
+setting does nothing. An example that teaches such an input must never reach a
+tag.
 
 ---
 
@@ -105,27 +126,26 @@ An input lives in **four places**. Miss one and `check-sync.sh` fails the
 build — which is the point, because the failure mode it replaces is silent:
 the input exists in the documentation, the user sets it, and nothing happens.
 
-1. The template's `spec:inputs` — with a `description`, plus `options` or
-   `regex` where the value is constrained. This block is the authoritative
-   reference for users.
-2. The template's `variables:` block, staged as `ARK_IN_<NAME>`.
-3. `action.yml` — the same input in `kebab-case`, with the same default,
-   handed to the runner through `env:` as `ARK_IN_<NAME>`.
-4. `src/run-scanner.sh` — forwarded to the container.
+1. The `inputs:` block of `action.yml` — with a `description` that names the
+   allowed values. This block is the authoritative reference for users.
+2. The `env:` of the scan step in `action.yml`, staged as `ARK_IN_<NAME>`.
+3. `src/run-scanner.sh` — forwarded to the container.
+4. The input tables of `README.md` and `README.pt-BR.md`.
 
 Three rules that are not negotiable:
 
-**Names and defaults match across platforms.** GitLab uses `snake_case`,
-GitHub uses `kebab-case`; everything else about the input is identical. A
-change that lands on one side only needs a stated reason.
+**Names match the image and the GitLab templates.** An input that forwards an
+image variable takes its name in `kebab-case`: `TRIVY_SEVERITY` is
+`trivy-severity` here and `trivy_severity` in the templates. Someone moving
+between the two platforms should have nothing to relearn.
 
 **An empty input is never forwarded.** That is what makes
-`input > CI variable > image default` hold. Forwarding an empty value would
-overwrite, with an empty string, a variable the project set globally.
+`input > workflow env > image default` hold. Forwarding an empty value would
+overwrite, with an empty string, a variable the workflow set as `env`.
 
 **Inputs never reach a shell as text.** They arrive as environment variables.
-A value spliced into a `run:` block or a `script:` line is a command injection
-waiting for the right input.
+A `${{ inputs.x }}` spliced into a `run:` block is a command injection waiting
+for the right input.
 
 ---
 
@@ -133,12 +153,11 @@ waiting for the right input.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
-[`VERSION`](VERSION) is the single source of truth for the component version,
-the scanner image tag that every template and the Action pin, and the report
-envelope that image writes:
+[`VERSION`](VERSION) is the single source of truth for the Action version, the
+scanner image tag it pins, and the report envelope that image writes:
 
 ```text
-COMPONENT_VERSION=1.2.0
+COMPONENT_VERSION=1.3.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
 SCANNER_VERSION=1.10
 REPORT_SCHEMA=ark-report-tools
@@ -152,7 +171,7 @@ pin directly. The onboarding guide needs no edit: it has no version of its own
 to update.
 
 What counts as breaking here is anything that changes what runs inside a
-consumer's pipeline: a removed or renamed input, a changed default, or a new
+consumer's workflow: a removed or renamed input, a changed default, or a new
 minimum runner version pulled in by an action referenced from `action.yml`.
 Record it in `CHANGELOG.md` — the consumer cannot see the diff, only the tag.
 
@@ -180,10 +199,10 @@ Common types: `feat`, `fix`, `docs`, `refactor`, `build`, `ci`, `chore`.
 Use the area as the scope when it applies:
 
 ```text
-feat(templates): add trivy_ignorefile to the Trivy scans
-fix(action): treat an empty path as the workspace root
+feat(action): add trivy-ignorefile to the Trivy scans
+fix(runner): treat an empty path as the workspace root
 chore(version): bump the scanner image to 1.10
-docs(readme): document the distributed cache caveat
+docs(readme): document the artifact name collision
 ```
 
 ---
@@ -194,10 +213,13 @@ docs(readme): document the distributed cache caveat
   `README.pt-BR.md` in Portuguese, with the language selector at the top.
   **Keep both in sync** — a change in one requires the same change in the
   other.
-- Every input is documented in the template's `spec:inputs` block. That block
-  is the reference; the README summarizes, it does not replace it.
+- Every input is documented twice: its `description` in `action.yml`, and a
+  row in the README tables. `check-sync.sh` fails when a README misses one.
+- Every YAML block in the READMEs that calls the Action is checked against
+  `action.yml` by `check-examples.py`, exactly like the files in `examples/`.
+  Write snippets that parse on their own.
 - `docs/` holds the onboarding guide, published to GitHub Pages. It explains
-  _why_ a decision was made; the README explains _how_ to use the component.
+  _why_ a decision was made; the README explains _how_ to use the Action.
   Resist adding a third place that says the same thing — there is no
   `check-sync.sh` for prose.
 - The guide never types a version. It writes `{{COMPONENT_VERSION}}`,
@@ -207,7 +229,7 @@ docs(readme): document the distributed cache caveat
   `check-sync.sh` fails on a version typed by hand. To preview the page, run
   `./scripts/render-docs.sh` and open `_site/index.html` — `docs/index.html`
   itself shows the raw placeholders.
-- Comments in the templates and in `src/run-scanner.sh` record the reason a
+- Comments in `action.yml` and in `src/run-scanner.sh` record the reason a
   line exists, not what it does. Several of them are the only surviving record
   of a bug that took a while to find.
 
@@ -221,17 +243,13 @@ Releases are cut from tags:
 2. Move the `[Unreleased]` entries in `CHANGELOG.md` under the new version.
 3. Tag `vMAJOR.MINOR.PATCH` and push it.
 
-[`.github/workflows/release.yml`](.github/workflows/release.yml) validates the
-templates, **refuses a tag that disagrees with `COMPONENT_VERSION`**, creates
-the release with generated notes, and force-moves the floating `vMAJOR` and
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs the
+checks, **refuses a tag that disagrees with `COMPONENT_VERSION`**, creates the
+release with generated notes, and force-moves the floating `vMAJOR` and
 `vMAJOR.MINOR` tags.
 
 Marketplace listing is a manual opt-in the API cannot set: open the release on
 GitHub and tick _Publish this Action to the GitHub Marketplace_.
-
-The GitLab CI/CD Catalog only lists components hosted on the GitLab instance
-itself, so publishing there goes through the mirror project described in
-[`examples/gitlab-catalog-mirror/`](examples/gitlab-catalog-mirror/).
 
 ---
 
@@ -240,9 +258,8 @@ itself, so publishing there goes through the mirror project described in
 The [PR template](.github/PULL_REQUEST_TEMPLATE.md) carries the full list. The
 short version:
 
-- [ ] The three local validations pass
+- [ ] The four local validations pass
 - [ ] A new input landed in all four places
-- [ ] Names and defaults match on both platforms
 - [ ] `README.md` and `README.pt-BR.md` are in sync
 - [ ] `CHANGELOG.md` has an `[Unreleased]` entry
 - [ ] Consumer-visible changes are called out explicitly

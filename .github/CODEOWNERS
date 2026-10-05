@@ -1,5 +1,5 @@
 # ==============================================================================
-# Tooark ci-security-scanner — CODEOWNERS
+# Tooark action-security-scanner — CODEOWNERS
 # ==============================================================================
 # GitHub uses this file to auto-request reviews from the right owner.
 # Rules are matched top-to-bottom; the LAST matching rule wins per file.
@@ -23,20 +23,20 @@
 /.github/workflows/                 @paulosfjunior
 /.github/CODEOWNERS                 @paulosfjunior
 
-# The published product: these run inside other people's pipelines, so a
+# The published product: these run inside other people's workflows, so a
 # change here reaches every consuming project on the next tag move.
 /action.yml                         @paulosfjunior
 /src/                               @paulosfjunior
-/templates/                         @paulosfjunior
 
-# Single source of truth for the pinned scanner image, and the checks that
-# keep the two platforms from drifting apart.
+# Single source of truth for the pinned scanner image, and the checks and
+# tests that keep the Action and its documentation from drifting apart.
 /VERSION                            @paulosfjunior
 /scripts/                           @paulosfjunior
+/tests/                             @paulosfjunior
 
-# Support boundaries users rely on when adopting the component.
+# Support boundaries users rely on when adopting the Action.
 /SUPPORTED-INTEGRATIONS.md          @paulosfjunior
 
-# Pipelines users copy into their own projects, and the onboarding guide.
+# Workflows users copy into their own projects, and the onboarding guide.
 /examples/                          @paulosfjunior
 /docs/                              @paulosfjunior

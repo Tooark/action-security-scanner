@@ -1,0 +1,45 @@
+# =============================================================================
+# Scanning an image that already lives in a registry.
+# -----------------------------------------------------------------------------
+# Copy into .github/workflows/ in the project you want to scan.
+#
+# Trivy pulls the image itself, so the Docker socket stays unmounted. That is
+# the safer setup, and the one to prefer on a shared self-hosted runner: build
+# and push in one job, scan from the registry in the next.
+# =============================================================================
+name: Image scan
+
+on:
+  # Rescan on a schedule: new CVEs are published against images that have not
+  # changed since they were built.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Lets GITHUB_TOKEN pull private packages of this repository from ghcr.io.
+  packages: read
+
+jobs:
+  image:
+    name: Scan the published image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Image scan
+        uses: Tooark/action-security-scanner@v1.3.0
+        env:
+          # Registry credentials are secrets, so they travel through env and
+          # never through inputs. Trivy reads both variables natively. Drop
+          # them for a public image.
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          command: image-scan
+          # Image references are lowercase, which github.repository is not
+          # guaranteed to be; spell the name out.
+          image: "ghcr.io/my-org/my-app:latest"
+          trivy-severity: CRITICAL,HIGH
+          # Also write an SBOM next to the report.
+          sbom: "true"
+          sbom-format: cyclonedx

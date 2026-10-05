@@ -1,0 +1,47 @@
+# =============================================================================
+# Sending Trivy findings to GitHub code scanning (the Security tab).
+# -----------------------------------------------------------------------------
+# Copy into .github/workflows/ in the project you want to scan.
+#
+# Code scanning is free on public repositories; private ones need GitHub Code
+# Security. Findings then show up under Security > Code scanning, and as
+# annotations on the pull request that introduced them.
+# =============================================================================
+name: Code scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  # Required by upload-sarif.
+  security-events: write
+
+jobs:
+  trivy:
+    name: Trivy to code scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # trivy-format: sarif keeps the JSON report and writes a SARIF copy next
+      # to it, named after the scan: scan-reports/trivy-filesystem.sarif.
+      - name: Filesystem scan
+        id: scan
+        uses: Tooark/action-security-scanner@v1.3.0
+        with:
+          command: filesystem-scan
+          trivy-format: sarif
+          # Code scanning is where the findings are triaged, so the step only
+          # reports its exit code instead of failing before the upload.
+          soft-fail: "true"
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.scan.outputs.reports-dir }}/trivy-filesystem.sarif
+          # Keeps these results apart from other tools uploading to the same
+          # repository.
+          category: trivy-filesystem

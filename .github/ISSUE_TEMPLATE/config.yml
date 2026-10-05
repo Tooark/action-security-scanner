@@ -3,11 +3,14 @@
 blank_issues_enabled: true
 contact_links:
   - name: 🔒 Report a security vulnerability
-    url: https://github.com/Tooark/ci-security-scanner/security/advisories/new
+    url: https://github.com/Tooark/action-security-scanner/security/advisories/new
     about: Please use private security advisories, not public issues.
   - name: 📘 Onboarding guide
-    url: https://tooark.com/ci-security-scanner/
+    url: https://tooark.com/action-security-scanner/
     about: What each file does and why — read this before filing a usage question.
+  - name: 🦊 Using GitLab CI?
+    url: https://github.com/Tooark/template-ci-security-scanner/issues/new/choose
+    about: The GitLab CI/CD templates live in their own repository.
   - name: 🐳 Issue in the scanner image itself
     url: https://github.com/Tooark/base-images/issues/new/choose
     about: Trivy, Hadolint, Betterleaks and ark-tools live in base-images, not here.
