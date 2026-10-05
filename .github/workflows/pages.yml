@@ -1,8 +1,8 @@
 # =============================================================================
-# ci-security-scanner :: GitHub Pages
+# action-security-scanner :: GitHub Pages
 # -----------------------------------------------------------------------------
 # Publishes docs/ as the onboarding guide at
-# https://tooark.com/ci-security-scanner/, after scripts/render-docs.sh has
+# https://tooark.com/action-security-scanner/, after scripts/render-docs.sh has
 # filled its version placeholders in from VERSION. That is why a change to
 # VERSION alone redeploys the site.
 #
@@ -10,8 +10,8 @@
 # source once, under Settings > Pages. The API cannot set it, so the first run
 # fails with "Pages site not found" until someone does.
 #
-# Nothing here touches the templates or the Action; a documentation change must
-# never be able to hold up a release.
+# Nothing here touches the Action; a documentation change must never be able
+# to hold up a release.
 # =============================================================================
 name: Pages
 

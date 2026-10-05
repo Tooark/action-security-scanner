@@ -2,19 +2,18 @@
 
 <!--
 Explain what this PR does and why. Reference the issue(s) it closes.
-Example: "Closes #42 — add trivy_ignorefile to the three Trivy templates."
+Example: "Closes #42 — add trivy-ignorefile to the Trivy scans."
 -->
 
 ## Affected area(s)
 
-- [ ] `templates/` — GitLab CI/CD components
-- [ ] `action.yml` — GitHub composite Action
+- [ ] `action.yml` — the composite Action
 - [ ] `src/run-scanner.sh` — the runner behind the Action
-- [ ] `scripts/` — validation run in CI and locally
+- [ ] `scripts/` and `tests/` — validation run in CI and locally
 - [ ] `.github/workflows/` — this repository's own CI
 - [ ] `VERSION` — scanner image or component version
 - [ ] `docs/` — onboarding guide
-- [ ] `examples/` — copy-ready pipelines
+- [ ] `examples/` — copy-ready workflows
 - [ ] Governance / documentation only
 
 ## Type of change
@@ -30,8 +29,8 @@ Example: "Closes #42 — add trivy_ignorefile to the three Trivy templates."
 ## Consumer impact
 
 <!--
-Does this change what runs inside someone else's pipeline? action.yml and
-templates/ do; .github/workflows/ does not. Call out anything that raises a
+Does this change what runs inside someone else's workflow? action.yml and
+src/run-scanner.sh do; .github/workflows/ does not. Call out anything that raises a
 requirement on the consumer's side — a new minimum runner version, a new
 permission, a changed default, a removed input — and add it to CHANGELOG.md.
 -->
@@ -42,9 +41,10 @@ permission, a changed default, a removed input — and add it to CHANGELOG.md.
 ## Checklist
 
 - [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/)
-- [ ] `python3 scripts/validate-templates.py` passes
 - [ ] `./scripts/check-sync.sh` passes
-- [ ] `shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh` passes
+- [ ] `python3 scripts/check-examples.py` passes
+- [ ] `./tests/run-scanner.test.sh` passes, with a case for any new behaviour
+- [ ] `shellcheck -s bash src/run-scanner.sh scripts/*.sh tests/*.sh` passes
 - [ ] Version pins were changed only through `VERSION`
 - [ ] `README.md` and `README.pt-BR.md` updated **and in sync** (if docs changed)
 - [ ] `CHANGELOG.md` updated under `[Unreleased]`
@@ -53,11 +53,11 @@ permission, a changed default, a removed input — and add it to CHANGELOG.md.
 
 All four places, or `check-sync.sh` will say so:
 
-- [ ] The template's `spec:inputs` — with `description`, and `options`/`regex` where they apply
-- [ ] The template's `variables:` block, as `ARK_IN_*`
-- [ ] `action.yml` — same input in `kebab-case`, staged as `ARK_IN_*` through `env:`
+- [ ] The `inputs:` block of `action.yml` — with a `description` naming the allowed values
+- [ ] The `env:` of the scan step in `action.yml`, staged as `ARK_IN_*`
 - [ ] `src/run-scanner.sh` — forwarded, and only when non-empty
-- [ ] The default matches on both platforms, and an empty value is still never forwarded
+- [ ] The input tables of `README.md` and `README.pt-BR.md`
+- [ ] The name matches the image variable and the GitLab templates (`kebab-case` here, `snake_case` there)
 
 ## Notes for reviewers
 

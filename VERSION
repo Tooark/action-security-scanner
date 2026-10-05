@@ -1,8 +1,8 @@
 # Single source of truth for versions in this repository.
-# scripts/check-sync.sh enforces that every template and action.yml pins
+# scripts/check-sync.sh enforces that action.yml and src/run-scanner.sh pin
 # exactly SCANNER_IMAGE:SCANNER_VERSION and that the docs quote these values;
 # scripts/render-docs.sh fills the onboarding guide's placeholders from them.
-COMPONENT_VERSION=1.2.0
+COMPONENT_VERSION=1.3.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
 SCANNER_VERSION=1.10
 REPORT_SCHEMA=ark-report-tools

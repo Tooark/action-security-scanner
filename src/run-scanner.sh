@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ci-security-scanner :: GitHub Action runner
+# action-security-scanner :: GitHub Action runner
 # -----------------------------------------------------------------------------
 # Translates the action inputs (staged as ARK_IN_* / ARK_* environment
 # variables) into a `docker run` of ghcr.io/tooark/security-scanner.
 #
-# It deliberately mirrors the GitLab templates: an empty input is never
-# forwarded, so precedence stays "input > workflow env > image default".
+# An empty input is never forwarded, so precedence stays
+# "input > workflow env > image default".
 # =============================================================================
 set -euo pipefail
 
-log() { printf '[ci-security-scanner] %s\n' "$*"; }
-die() { printf '[ci-security-scanner] error: %s\n' "$*" >&2; exit 1; }
+log() { printf '[action-security-scanner] %s\n' "$*"; }
+die() { printf '[action-security-scanner] error: %s\n' "$*" >&2; exit 1; }
 
 # -----------------------------------------------------------------------------
 # Container layout. The workspace is always mounted at /workspace, so every
@@ -81,13 +81,21 @@ if [ "${ARK_DOCKER_SOCKET:-false}" = "true" ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Environment. Only non-empty values are forwarded, so a workflow-level `env:`
-# keeps working when the matching input is left blank.
+# Environment. An input is forwarded only when it carries a value; a blank one
+# leaves the variable to whatever the workflow set as `env:`, which
+# pass_job_env hands over further down.
 # -----------------------------------------------------------------------------
+
+# Names already decided here, one per line, so the job environment cannot
+# override them further down. FULL_SCAN_PATH starts in the list because
+# full-scan always receives --path, rewritten for the container.
+FORWARDED=$'\nFULL_SCAN_PATH\n'
+
 add_env() {
   local name="$1" value="$2"
   [ -n "$value" ] || return 0
   DOCKER_ARGS+=(-e "$name=$value")
+  FORWARDED+="$name"$'\n'
   log "  $name=$value"
 }
 
@@ -122,15 +130,41 @@ add_env_from_input \
   BETTERLEAKS_FAIL_ON_FINDINGS BETTERLEAKS_REDACT BETTERLEAKS_LOG_MAX_FINDINGS \
   REPORT_URL REPORT_FAIL_ON_ERROR
 
-# Secrets never travel as action inputs; they are read from the ambient env.
-for secret_var in TRIVY_TOKEN TRIVY_USERNAME TRIVY_PASSWORD REPORT_TOKEN REPORT_HEADERS \
-  REPORT_SBOM_URL REPORT_SBOM_TOKEN; do
-  eval "secret_value=\${${secret_var}:-}"
-  if [ -n "${secret_value}" ]; then
-    DOCKER_ARGS+=(-e "$secret_var=$secret_value")
-    log "  $secret_var=***"
+# -----------------------------------------------------------------------------
+# Job environment. `docker run` starts the container with an empty environment,
+# so a variable the workflow sets with `env:` reaches the tools only if it is
+# passed on here. That covers three things: a setting whose input was left
+# blank, the secrets (which never travel as inputs), and the variables that
+# have no input at all, such as TRIVY_SKIP_DB_UPDATE or REPORT_METHOD. This is
+# the middle of "input > workflow env > image default".
+#
+# Passed by name, so docker reads the value from this process: it lands neither
+# in argv, where any other process on the runner could read it, nor in the log.
+# -----------------------------------------------------------------------------
+readonly JOB_ENV_RE='^(TRIVY|HADOLINT|BETTERLEAKS|SBOM|FULL_SCAN|REPORT)_[A-Z0-9_]+$'
+
+pass_job_env() {
+  local name names passed=()
+  names="$(compgen -e | sort)"
+  while IFS= read -r name; do
+    if [[ ! $name =~ $JOB_ENV_RE ]] || [ -z "${!name}" ]; then
+      continue
+    fi
+    # An input that won, or a path this script owns.
+    if [[ $FORWARDED == *$'\n'"$name"$'\n'* ]]; then
+      continue
+    fi
+    DOCKER_ARGS+=(-e "$name")
+    passed+=("$name")
+  done <<<"$names"
+
+  if [ "${#passed[@]}" -gt 0 ]; then
+    log "from the job env:"
+    for name in "${passed[@]}"; do
+      log "  $name"
+    done
   fi
-done
+}
 
 # CI metadata: ark-tools auto-detects GitHub Actions from these.
 # GITHUB_WORKSPACE is remapped so the in-container path detection stays valid.
@@ -166,7 +200,7 @@ if [ -z "$IMAGE_DIGEST" ]; then
       "$SCANNER_IMAGE"@sha256:*)
         IMAGE_DIGEST="${repo_digest#*@}"
         break
-        ;;
+      ;;
     esac
   done < <(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAGE_REF" 2>/dev/null || true)
 fi
@@ -189,9 +223,9 @@ case "$COMMAND" in
   full-scan)
     if [ -n "$IMAGE_INPUT" ]; then
       ARGS+=("$IMAGE_INPUT")
-    elif [ -z "${ARK_IN_FULL_SCAN_SKIP_IMAGE:-}" ]; then
-      DOCKER_ARGS+=(-e "FULL_SCAN_SKIP_IMAGE=true")
-      log "  no image input -> FULL_SCAN_SKIP_IMAGE=true"
+    elif [ -z "${ARK_IN_FULL_SCAN_SKIP_IMAGE:-}" ] && [ -z "${FULL_SCAN_SKIP_IMAGE:-}" ]; then
+      log "no image input:"
+      add_env "FULL_SCAN_SKIP_IMAGE" "true"
     fi
     ARGS+=(--path "${PATH_INPUT:-$CONTAINER_WORKSPACE}")
     if [ "${ARK_IN_SBOM:-false}" = "true" ]; then
@@ -238,6 +272,9 @@ if [ -n "${ARK_IN_EXTRA_ARGS:-}" ]; then
   set +f
   ARGS+=(-- "${EXTRA[@]}")
 fi
+
+# Last, so that everything decided above is already in FORWARDED.
+pass_job_env
 
 # -----------------------------------------------------------------------------
 # Run.

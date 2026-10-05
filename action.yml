@@ -1,13 +1,18 @@
 # =============================================================================
-# ci-security-scanner :: GitHub Action
+# action-security-scanner :: GitHub Action
 # -----------------------------------------------------------------------------
 # Runs Trivy, Hadolint and Betterleaks through the Tooark security-scanner
-# image. Input names and semantics mirror the GitLab templates in templates/.
+# image. The trivy-*, hadolint-*, betterleaks-* and report-* inputs forward the
+# environment variable of the same name that the image reads: trivy-severity
+# sets TRIVY_SEVERITY.
 #
 # Precedence for every tunable: input > workflow env > image default.
 # Leave an input empty to keep whatever the workflow already sets as env.
 #
 # Requires a Linux runner with Docker available.
+#
+# The same scans as GitLab CI/CD components, with the same input names in
+# snake_case: https://github.com/Tooark/template-ci-security-scanner
 # =============================================================================
 name: "Tooark Security Scanner"
 description: "Trivy, Hadolint and Betterleaks in one job, with a consolidated ark-report-tools report."

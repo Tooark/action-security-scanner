@@ -1,6 +1,6 @@
 # Support
 
-Thanks for your interest in **Tooark ci-security-scanner**! 💙
+Thanks for your interest in **Tooark action-security-scanner**! 💙
 
 This document explains where to get help based on what you're trying to do.
 
@@ -8,35 +8,36 @@ This document explains where to get help based on what you're trying to do.
 
 ## 🤔 I have a question
 
-**Read the onboarding guide first:** <https://tooark.com/ci-security-scanner/>
+**Read the onboarding guide first:** <https://tooark.com/action-security-scanner/>
 
-It walks the repository file by file — what each artifact does, how the GitHub
-and GitLab front ends stay interchangeable, and the reasoning behind the
+It walks the repository file by file — what each artifact does, how an input
+travels from the workflow to the scanner, and the reasoning behind the
 decisions that look odd on a first read.
 
 Still stuck? **Open an issue:**
-<https://github.com/Tooark/ci-security-scanner/issues/new/choose>
+<https://github.com/Tooark/action-security-scanner/issues/new/choose>
 
-Please **search existing issues** first. The authoritative reference for any
-input is the `spec:inputs` block of the matching template in
-[`templates/`](templates/); ready-made pipelines live in
-[`examples/`](examples/).
+Please **search existing issues** first. The reference for every input is the
+[README](README.md#-inputs), backed by [`action.yml`](action.yml); ready-made
+workflows live in [`examples/`](examples/).
+
+Using GitLab CI? Questions about the templates go to
+[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner/issues/new/choose).
 
 ---
 
 ## 🐛 I found a bug
 
 **Open an issue using the "Bug report" template:**
-<https://github.com/Tooark/ci-security-scanner/issues/new/choose>
+<https://github.com/Tooark/action-security-scanner/issues/new/choose>
 
 Please include:
 
-- **How you consume it** (GitHub Action, GitLab remote include, CI/CD Catalog).
 - **Which scan** (`full-scan`, `secret-scan`, …).
-- **The component tag** you pinned (e.g. `v1.0.0`) and the **scanner image tag**.
+- **The Action tag** you pinned (e.g. `v1.0.0`) and the **scanner image tag**.
 - **Which runner** — self-hosted runners behave differently for image scanning,
   caching and file ownership.
-- **The job or step** that reproduces it.
+- **The step** that reproduces it, with its `with:` and `env:`.
 - **Relevant logs** — redact credentials, tokens and any detected secret.
 
 ---
@@ -49,25 +50,26 @@ repository. They ship in the `security-scanner` image, built from
 
 Rule of thumb:
 
-| Symptom                                                     | Where it belongs |
-| ----------------------------------------------------------- | ---------------- |
-| An input is ignored, mis-named, or missing on one platform  | here             |
-| The job fails before `ark-tools` runs                       | here             |
-| A scan finds the wrong thing, or a tool flag is unsupported | `base-images`    |
-| The report format or the consolidated envelope is wrong     | `base-images`    |
-| The report's `image` object names the wrong image           | here             |
+| Symptom                                                     | Where it belongs                                                                         |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| An input is ignored or mis-named                            | here                                                                                     |
+| The step fails before `ark-tools` runs                      | here                                                                                     |
+| The cache, the artifact upload or file ownership misbehaves | here                                                                                     |
+| A scan finds the wrong thing, or a tool flag is unsupported | `base-images`                                                                            |
+| The report format or the consolidated envelope is wrong     | `base-images`                                                                            |
+| The report's `image` object names the wrong image           | here                                                                                     |
+| Anything in a `.gitlab-ci.yml`                              | [`template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner) |
 
 ---
 
 ## ✨ I have an improvement idea
 
 **Open an issue using the "Feature request" template:**
-<https://github.com/Tooark/ci-security-scanner/issues/new/choose>
+<https://github.com/Tooark/action-security-scanner/issues/new/choose>
 
 Explain the **problem** you are trying to solve, not just the solution. Note
-that a generated GitLab job is an ordinary job — much of what people ask for
-can already be done by redeclaring the job or setting the matching environment
-variable.
+that every variable the image reads can already be set as `env` on the step —
+an input is a convenience on top of that, not the only way in.
 
 ---
 
@@ -75,7 +77,7 @@ variable.
 
 **Do NOT open a public issue.** Use one of these private channels:
 
-- **Preferred**: [GitHub Security Advisories](https://github.com/Tooark/ci-security-scanner/security/advisories/new)
+- **Preferred**: [GitHub Security Advisories](https://github.com/Tooark/action-security-scanner/security/advisories/new)
 - **Email**: `security@tooark.com` _(PGP key available on request)_
 
 Full policy and response targets are in [`SECURITY.md`](SECURITY.md).
@@ -84,11 +86,12 @@ Full policy and response targets are in [`SECURITY.md`](SECURITY.md).
 
 ## 📚 I want to read the docs
 
-| Audience                | Start here                                                         |
-| ----------------------- | ------------------------------------------------------------------ |
-| **New to CI pipelines** | [Onboarding guide](https://tooark.com/ci-security-scanner/)        |
-| **Users**               | [README.md](README.md) · [README.pt-BR.md](README.pt-BR.md)        |
-| **Every input**         | The `spec:inputs` block of each file in [`templates/`](templates/) |
-| **Support boundaries**  | [SUPPORTED-INTEGRATIONS.md](SUPPORTED-INTEGRATIONS.md)             |
-| **Pipeline examples**   | [examples/](examples/)                                             |
-| **Contributors**        | [CONTRIBUTING.md](CONTRIBUTING.md)                                 |
+| Audience                | Start here                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| **New to CI pipelines** | [Onboarding guide](https://tooark.com/action-security-scanner/)                               |
+| **Users**               | [README.md](README.md) · [README.pt-BR.md](README.pt-BR.md)                                   |
+| **Every input**         | [README — Inputs](README.md#-inputs) and [`action.yml`](action.yml)                            |
+| **Support boundaries**  | [SUPPORTED-INTEGRATIONS.md](SUPPORTED-INTEGRATIONS.md)                                        |
+| **Workflow examples**   | [examples/](examples/)                                                                        |
+| **Contributors**        | [CONTRIBUTING.md](CONTRIBUTING.md)                                                            |
+| **GitLab CI users**     | [Tooark/template-ci-security-scanner](https://github.com/Tooark/template-ci-security-scanner) |

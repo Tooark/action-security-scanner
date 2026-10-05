@@ -42,14 +42,19 @@ jobs:
           sys.exit(1 if failed else 0)
           PY
 
-      - name: Validate GitLab component templates
-        run: python3 scripts/validate-templates.py
-
-      - name: Check version pinning and input parity
+      - name: Check version pinning, input wiring and docs
         run: bash scripts/check-sync.sh
 
+      - name: Check the examples against action.yml
+        run: python3 scripts/check-examples.py
+
+      # No Docker involved: a stand-in records the command line the script
+      # builds. The self-scan job below is what runs the real image.
+      - name: Test the runner script
+        run: bash tests/run-scanner.test.sh
+
       - name: ShellCheck
-        run: shellcheck -s bash src/run-scanner.sh scripts/check-sync.sh scripts/render-docs.sh
+        run: shellcheck -s bash src/run-scanner.sh scripts/*.sh tests/*.sh
 
       # Pinned by digest: a third-party image runs with this job's context, and
       # a mutable tag would let it change without a commit here. This is

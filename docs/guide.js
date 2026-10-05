@@ -1,5 +1,5 @@
 /* =============================================================================
-   ci-security-scanner :: onboarding guide
+   action-security-scanner :: onboarding guide
    -----------------------------------------------------------------------------
    This lives in its own file rather than inline because the site is served
    behind a Content Security Policy of `script-src 'self'`. An inline <script>

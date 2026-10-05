@@ -1,0 +1,35 @@
+# =============================================================================
+# The smallest useful workflow: scan the repository on every push and PR.
+# -----------------------------------------------------------------------------
+# Copy into .github/workflows/ in the project you want to scan.
+#
+# With no `image` input, full-scan skips the image step and runs the other
+# three: Trivy over the source tree, Betterleaks over the git history and
+# Hadolint over ./Dockerfile (a missing Dockerfile is a warning, not a failure).
+#
+# The job fails when a gate trips: a HIGH or CRITICAL vulnerability that has a
+# fix, a Dockerfile finding at `error` level, or any detected secret.
+# =============================================================================
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Betterleaks walks the git history; a shallow clone hides most of it.
+          fetch-depth: 0
+
+      # Always pin a tag or a commit SHA. Reports are uploaded as the
+      # `security-reports` artifact.
+      - uses: Tooark/action-security-scanner@v1.3.0

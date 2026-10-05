@@ -6,6 +6,116 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-05
+
+The repository has a new name, `Tooark/action-security-scanner`, and a single
+job: the GitHub Action. The GitLab CI/CD templates moved to
+[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner).
+**Every workflow has to change its `uses:` line** — see the first entry under
+_Changed_.
+
+### Added
+
+- Three more copy-ready workflows in `examples/`: `quick-start.yml`, the
+  smallest useful setup; `registry-image.yml`, a scheduled scan of an image in
+  a private registry; and `code-scanning.yml`, which uploads Trivy findings as
+  SARIF to the repository's Security tab.
+- `tests/run-scanner.test.sh` tests `src/run-scanner.sh` without Docker: a
+  stand-in `docker` records the command line the script builds, and some fifty
+  assertions cover precedence, what is forwarded and what never is, path
+  rewriting, soft-fail and the outputs. CI runs it on every commit.
+- `scripts/check-examples.py` checks every step that calls the Action, in
+  `examples/` and in the YAML blocks of both READMEs, against `action.yml`: an
+  undeclared input, an undeclared output or an unknown `command` fails CI.
+  GitHub itself only warns about an undeclared input, and then ignores it.
+- `scripts/check-sync.sh` now also fails when an input is declared but read by
+  no step, when `src/run-scanner.sh` reads an `ARK_IN_*` the Action never
+  stages, when an input is missing from either README, and when the
+  `scanner-version` row of a README or the current line of
+  `SUPPORTED-INTEGRATIONS.md` names an image tag other than the one in
+  `VERSION`.
+- Contributing, Help & Security and Support sections at the end of both
+  READMEs.
+
+### Changed
+
+- **The repository is renamed to `Tooark/action-security-scanner`.** It was
+  `Tooark/ci-security-scanner`. GitHub does not redirect `uses:` for a renamed
+  action repository, so **every workflow has to change its reference**, whatever
+  it pins:
+
+  ```yaml
+  - uses: Tooark/action-security-scanner@v1.3.0 # was Tooark/ci-security-scanner@…
+  ```
+
+  Tags and releases carried over, so `@v1.2.0`, `@v1.1.0` and `@v1` resolve
+  under the new name too. The onboarding guide moved with the repository, to
+  <https://tooark.com/action-security-scanner/>. The log prefix and the file
+  headers follow the name: `[action-security-scanner]`.
+
+- The README is the complete reference for the Action: every input with its
+  default, the outputs, the report files each scan writes, and recipes. It no
+  longer defers to the templates' `spec:inputs`. Every section heading carries
+  an icon, which changes the anchor of the section: it now starts with a
+  hyphen, `#-inputs` where it was `#inputs`.
+- `SUPPORTED-INTEGRATIONS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`
+  and the issue and pull request templates describe the Action only, and send
+  GitLab questions to the sister repository.
+- The example workflow moved from `examples/github/security-scan.yml` to
+  `examples/security-scan.yml`, and its advisory job sets its own
+  `artifact-name`.
+- The onboarding guide covers the Action only. The GitLab section is gone, the
+  walkthrough of `src/run-scanner.sh` follows the script as it is now, and the
+  page closes with a card pointing at the sibling guide of the GitLab
+  templates. Its accent colour moved from teal to GitHub's green: each guide
+  takes the colour of its platform, and the green no longer sits next to
+  Trivy's teal on the gate cards.
+
+### Removed
+
+- **The GitLab CI/CD templates**, together with `scripts/validate-templates.py`,
+  the GitLab examples and the CI/CD Catalog mirror pipeline. They moved to
+  [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner),
+  which continues from the same history and the same tags. If you consume the
+  templates from here:
+  - a remote include must point at
+    `https://raw.githubusercontent.com/Tooark/template-ci-security-scanner/<tag>/templates/<scan>.yml`.
+    One that still names `Tooark/ci-security-scanner` resolves only for as
+    long as GitHub redirects the old name, and only for tags up to `v1.2.0`,
+    the last to carry `templates/`;
+  - a catalog mirror set up from `examples/gitlab-catalog-mirror/` fails its
+    `sync` job with `upstream release is missing templates` from this release
+    on. Set `UPSTREAM_REPO` to `Tooark/template-ci-security-scanner`, in the
+    mirror's `.gitlab-ci.yml` or as a project CI/CD variable.
+
+### Fixed
+
+- **A variable set with `env:` now reaches the scanner.** The documented
+  precedence is `input > workflow env > image default`, but `docker run` starts
+  the container with an empty environment and only inputs and seven named
+  secrets were passed on. A workflow that set `TRIVY_SEVERITY` once in a
+  top-level `env:` and left the input blank got the image default instead, and
+  `TRIVY_SKIP_DB_UPDATE` — which the README told people to set as job `env` —
+  never took effect. The Action now passes on every `TRIVY_*`, `HADOLINT_*`,
+  `BETTERLEAKS_*`, `SBOM_*`, `FULL_SCAN_*` and `REPORT_*` variable found in the
+  step's environment whose input is blank. An input still wins, and
+  `REPORT_DIR`, `TRIVY_CACHE_DIR` and `FULL_SCAN_PATH` stay under the Action's
+  control because they are container paths. **Check your workflows for
+  variables under those prefixes that were being ignored until now** — they
+  start to apply with this release.
+- The diagram of a run in the onboarding guide no longer lets text out of its
+  boxes. It was an SVG with fixed-width boxes: the label under it was cut off
+  at the right edge on the published page, and opening `docs/index.html`
+  without rendering it pushed the version placeholder out of the first box. It
+  is now HTML, so text wraps inside each card, and the cards stack on a narrow
+  screen instead of scrolling sideways.
+
+### Security
+
+- Secrets are handed to Docker by name (`-e REPORT_TOKEN`) instead of by value
+  (`-e REPORT_TOKEN=…`), so they no longer appear in the command line of
+  `docker run`, where another process on a shared runner could read them.
+
 ## [1.2.0] - 2026-09-27
 
 ### Added
@@ -195,7 +305,8 @@ a tag — this content first reached consumers as part of 1.1.0.
   socket mount, unredacted Betterleaks output, and Trivy's secret scanner
   writing findings into an uploaded artifact.
 
-[Unreleased]: https://github.com/Tooark/ci-security-scanner/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/Tooark/ci-security-scanner/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/Tooark/ci-security-scanner/releases/tag/v1.1.0
-[1.0.0]: https://github.com/Tooark/ci-security-scanner/commit/56263b1c4c085d5ce785ed263194c04609b8f0be
+[Unreleased]: https://github.com/Tooark/action-security-scanner/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Tooark/action-security-scanner/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/Tooark/action-security-scanner/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Tooark/action-security-scanner/releases/tag/v1.1.0
+[1.0.0]: https://github.com/Tooark/action-security-scanner/commit/56263b1c4c085d5ce785ed263194c04609b8f0be

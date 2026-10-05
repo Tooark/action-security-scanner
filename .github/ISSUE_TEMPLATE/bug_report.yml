@@ -1,5 +1,5 @@
 name: 🐛 Bug report
-description: Report a defect in the GitLab templates, the GitHub Action or the runner script.
+description: Report a defect in the GitHub Action or its runner script.
 title: "[bug] "
 labels: ["bug", "triage"]
 body:
@@ -7,7 +7,8 @@ body:
     attributes:
       value: |
         Thanks for taking the time to file a bug report! Please fill out the sections below.
-        For **security vulnerabilities**, do NOT file a public issue — see [`SECURITY.md`](https://github.com/Tooark/ci-security-scanner/blob/main/SECURITY.md).
+        For **security vulnerabilities**, do NOT file a public issue — see [`SECURITY.md`](https://github.com/Tooark/action-security-scanner/blob/main/SECURITY.md).
+        Using **GitLab CI**? The templates live in [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner/issues/new/choose).
 
   - type: checkboxes
     id: preflight
@@ -20,20 +21,8 @@ body:
           required: true
         - label: This is not a security vulnerability (those go through the private channel).
           required: true
-        - label: This is a defect in the component, not a finding the scanner reported in my own code.
+        - label: This is a defect in the Action, not a finding the scanner reported in my own code.
           required: true
-
-  - type: dropdown
-    id: platform
-    attributes:
-      label: How are you consuming it?
-      options:
-        - GitHub Action (uses:)
-        - GitLab — remote include
-        - GitLab — CI/CD Catalog component
-        - Directly (docker run / src/run-scanner.sh)
-    validations:
-      required: true
 
   - type: dropdown
     id: command
@@ -54,8 +43,8 @@ body:
   - type: input
     id: component-version
     attributes:
-      label: Component version
-      description: The tag you pinned.
+      label: Action version
+      description: The tag or commit SHA you pinned.
       placeholder: "e.g., v1.0.0"
     validations:
       required: true
@@ -64,7 +53,7 @@ body:
     id: scanner-version
     attributes:
       label: Scanner image tag
-      description: Leave the default unless you overrode scanner_version / scanner-version.
+      description: Leave the default unless you overrode scanner-version.
       placeholder: "e.g., ghcr.io/tooark/security-scanner:1.10"
     validations:
       required: true
@@ -75,11 +64,10 @@ body:
       label: Runner
       description: Self-hosted runners are where image-scan, caching and file ownership behave differently.
       options:
-        - GitHub-hosted (ubuntu-latest)
-        - GitHub self-hosted
-        - GitLab.com shared runner
-        - GitLab self-hosted — docker executor
-        - GitLab self-hosted — other executor
+        - GitHub-hosted (ubuntu-latest or a pinned ubuntu-*)
+        - Self-hosted — ephemeral
+        - Self-hosted — long-lived or shared
+        - Job running inside a container (container:)
         - Other
     validations:
       required: true
@@ -87,8 +75,8 @@ body:
   - type: textarea
     id: snippet
     attributes:
-      label: Pipeline snippet
-      description: The job or step that reproduces the problem, with the inputs you set.
+      label: Workflow snippet
+      description: The step that reproduces the problem, with its `with:` and `env:` — and the `actions/checkout` step before it.
       render: yaml
     validations:
       required: true
@@ -120,4 +108,4 @@ body:
     id: context
     attributes:
       label: Anything else?
-      description: Overrides applied to the generated job, custom reports_dir, proxy, air-gapped instance, etc.
+      description: Variables set as env, a custom reports-dir, a proxy, a registry mirror, etc.
