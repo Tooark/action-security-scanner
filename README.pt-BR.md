@@ -9,7 +9,7 @@
   caractere invisível na âncora e quebra todo link para ela.
 -->
 <div align="left">
-  <img src="https://raw.githubusercontent.com/Tooark/action-security-scanner/main/media/banner-ci-security-scanner.png" alt="CI Security Scanner" width="100%" />
+  <img src="https://raw.githubusercontent.com/Tooark/action-security-scanner/main/media/banner-ci-security-scanner.pt-BR.png" alt="CI Security Scanner" width="100%" />
 </div>
 
 # CI Security Scanner — GitHub Action
