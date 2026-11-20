@@ -25,7 +25,7 @@ database and the reports as an artifact.
 
 > **On GitLab?** The same scans, with the same input names, ship as GitLab
 > CI/CD templates in
-> [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner).
+> [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner).
 
 New to CI pipelines? The
 [onboarding guide](https://tooark.com/action-security-scanner/) walks through
@@ -88,7 +88,7 @@ jobs:
         with:
           fetch-depth: 0 # Betterleaks needs the full git history
 
-      - uses: Tooark/action-security-scanner@v1.3.0
+      - uses: Tooark/action-security-scanner@v1.4.0
 ```
 
 With no inputs the Action runs `full-scan` without the image step: Trivy over
@@ -101,7 +101,7 @@ To include the container image the job has just built:
 ```yaml
 - run: docker build -t "myapp:${{ github.sha }}" .
 
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   with:
     image: "myapp:${{ github.sha }}"
     docker-socket: "true" # only when the image was built on this runner
@@ -209,7 +209,7 @@ container mount point.
 | Input             | Default                           | Notes                                                   |
 | ----------------- | --------------------------------- | ------------------------------------------------------- |
 | `scanner-image`   | `ghcr.io/tooark/security-scanner` | Change it to pull from a mirror                         |
-| `scanner-version` | `1.10`                            | Image tag. Pin it; `latest` makes runs non-reproducible |
+| `scanner-version` | `1.13`                            | Image tag. Pin it; `latest` makes runs non-reproducible |
 
 ### Trivy
 
@@ -293,7 +293,7 @@ The tool inputs map one to one to the environment variables documented in the
 
 ```yaml
 - id: scan
-  uses: Tooark/action-security-scanner@v1.3.0
+  uses: Tooark/action-security-scanner@v1.4.0
   with:
     soft-fail: "true"
 
@@ -353,7 +353,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: Tooark/action-security-scanner@v1.3.0
+      - uses: Tooark/action-security-scanner@v1.4.0
         with:
           command: filesystem-scan
 ```
@@ -373,7 +373,7 @@ the command line of `docker run` nor in the log, which prints only the names of
 the variables it took from the environment.
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   env:
     REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
   with:
@@ -392,7 +392,7 @@ short commit — never the secret itself.
 Docker socket stays unmounted:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   env:
     TRIVY_USERNAME: ${{ github.actor }}
     TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -404,12 +404,12 @@ Docker socket stays unmounted:
 **Run more than one scan in a job.** Give each run its own `artifact-name`:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   with:
     command: secret-scan
     artifact-name: secret-scan-reports
 
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   with:
     command: dockerfile-lint
     dockerfile: docker/Dockerfile.worker
@@ -420,7 +420,7 @@ Docker socket stays unmounted:
 is picked up automatically — or a Betterleaks baseline:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.3.0
+- uses: Tooark/action-security-scanner@v1.4.0
   with:
     command: secret-scan
     betterleaks-baseline: .security/betterleaks-baseline.json
@@ -639,7 +639,7 @@ has the details.
 
 | Project                                                                                         | What it is                                                      |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner) | The same scans as GitLab CI/CD templates                        |
+| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | The same scans as GitLab CI/CD templates                        |
 | [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/security-scanner)        | The `security-scanner` image: the tools and the `ark-tools` CLI |
 
 ---

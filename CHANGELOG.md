@@ -6,6 +6,44 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-19
+
+The scanner image moves to 1.13. No input, output or default other than
+`scanner-version` changes.
+
+### Changed
+
+- Scanner image bumped to `ghcr.io/tooark/security-scanner:1.13`, the new
+  default of `scanner-version`. It carries newer tools and nothing else: Trivy
+  0.74.0 → 0.76.2 and Betterleaks 1.8.1 → 1.10.1, with Hadolint still at
+  2.15.1. The `ark-tools` commands, the variables the image reads and the
+  `ark-report-tools` envelope v1.3 are the ones of 1.10, so no input changes
+  and a collector behind `report-url` needs no update. Two things a workflow
+  can notice:
+  - newer scanners know more rules, so a job that passed can start failing a
+    gate on a finding the older tools did not report. A project that needs
+    time pins `scanner-version: "1.10"`;
+  - the Trivy database cache starts cold once. Its key carries the scanner
+    tag, so the first run after the update downloads a whole database and
+    saves it under the new key.
+
+  Released as a minor because the image moved a minor: the scanner default
+  follows the image's own versioning (see `CONTRIBUTING.md`).
+
+- Every reference to the sibling repository of the GitLab templates uses its
+  current name, `Tooark/template-security-scanner`. It was
+  `Tooark/template-ci-security-scanner`; the old links still redirect, so
+  nothing breaks for a reader of an older release. Entries of earlier releases
+  in this file keep the name they were written with.
+
+### Fixed
+
+- The card that closes the onboarding guide links the sibling guide of the
+  GitLab templates at its current address,
+  <https://tooark.com/template-security-scanner/>. That repository was renamed
+  to `Tooark/template-security-scanner`, and unlike a repository link, a Pages
+  address does not redirect: the old one answered 404.
+
 ## [1.3.0] - 2026-10-05
 
 The repository has a new name, `Tooark/action-security-scanner`, and a single
@@ -305,7 +343,8 @@ a tag — this content first reached consumers as part of 1.1.0.
   socket mount, unredacted Betterleaks output, and Trivy's secret scanner
   writing findings into an uploaded artifact.
 
-[Unreleased]: https://github.com/Tooark/action-security-scanner/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Tooark/action-security-scanner/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Tooark/action-security-scanner/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Tooark/action-security-scanner/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Tooark/action-security-scanner/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Tooark/action-security-scanner/releases/tag/v1.1.0

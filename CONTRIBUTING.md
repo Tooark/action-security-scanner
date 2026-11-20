@@ -9,7 +9,7 @@ input does what the documentation says — which is the constraint that shapes
 almost every rule below.
 
 The same scans ship for GitLab CI from a sister repository,
-[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner).
+[`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner).
 The two share input names on purpose, so a change to an input here is usually
 worth an issue there.
 
@@ -58,7 +58,7 @@ from [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/secu
 | The cache, the artifact upload, file ownership        | here                           |
 | A tool needs a flag the image does not expose         | `base-images`                  |
 | The report format or the consolidated envelope        | `base-images`                  |
-| Anything about a GitLab template or the CI/CD Catalog | `template-ci-security-scanner` |
+| Anything about a GitLab template or the CI/CD Catalog | `template-security-scanner` |
 
 Before proposing a new input, check that it cannot already be done by setting
 the matching environment variable as `env` on the step — the Action passes on
@@ -157,9 +157,9 @@ The project follows [Semantic Versioning](https://semver.org/).
 scanner image tag it pins, and the report envelope that image writes:
 
 ```text
-COMPONENT_VERSION=1.3.0
+COMPONENT_VERSION=1.4.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.10
+SCANNER_VERSION=1.13
 REPORT_SCHEMA=ark-report-tools
 REPORT_VERSION=1.3
 ```
@@ -201,7 +201,7 @@ Use the area as the scope when it applies:
 ```text
 feat(action): add trivy-ignorefile to the Trivy scans
 fix(runner): treat an empty path as the workspace root
-chore(version): bump the scanner image to 1.10
+chore(version): bump the scanner image to 1.13
 docs(readme): document the artifact name collision
 ```
 

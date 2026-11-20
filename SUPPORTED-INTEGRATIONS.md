@@ -15,9 +15,9 @@ filled in; the `bug` template asks for exactly the fields this page indexes.
 
 | Platform                               | How it is consumed                                                                              | Status            |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------- |
-| **GitHub Actions** — github.com        | `uses: Tooark/action-security-scanner@v1.3.0`                                                   | ✅ Supported      |
+| **GitHub Actions** — github.com        | `uses: Tooark/action-security-scanner@v1.4.0`                                                   | ✅ Supported      |
 | **Direct invocation**                  | `src/run-scanner.sh` with `ARK_*` variables                                                     | ⚠️ Best effort    |
-| **GitLab CI**                          | [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner) | ➡️ Sister project |
+| **GitLab CI**                          | [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | ➡️ Sister project |
 | Jenkins, Azure DevOps, CircleCI, Drone | —                                                                                               | ❌ Not covered    |
 
 The Action is a packaging layer. On an unsupported CI system you can still run
@@ -92,8 +92,8 @@ with the default shallow clone it sees almost nothing **and does not complain**.
 
 | Action version      | Scanner image                          | Status     |
 | ------------------- | -------------------------------------- | ---------- |
-| `1.3.x`             | `ghcr.io/tooark/security-scanner:1.10` | Current    |
-| `1.2.x`             | `ghcr.io/tooark/security-scanner:1.10` | Superseded |
+| `1.4.x`             | `ghcr.io/tooark/security-scanner:1.13` | Current    |
+| `1.2.x` and `1.3.x` | `ghcr.io/tooark/security-scanner:1.10` | Superseded |
 | `1.0.x` and `1.1.x` | `ghcr.io/tooark/security-scanner:1.9`  | Superseded |
 
 [`VERSION`](VERSION) is the single source of truth for this pairing, and
@@ -105,7 +105,7 @@ specific image reads.
 Releases up to `1.2.x` were published under the repository's previous name,
 `Tooark/ci-security-scanner`, and also carried the GitLab CI/CD templates.
 Those moved to
-[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner),
+[`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner),
 which continues from the same history and the same tags.
 
 ### Reference tags
@@ -150,7 +150,7 @@ The supported values of `trivy-format`, `hadolint-format`,
 
 - Windows and macOS runners
 - CI systems other than GitHub Actions — GitLab CI has its
-  [own project](https://github.com/Tooark/template-ci-security-scanner)
+  [own project](https://github.com/Tooark/template-security-scanner)
 - Container runtimes other than Docker (Podman is untested)
 - Fully air-gapped installations
 - Scanner image tags outside the pairing table above

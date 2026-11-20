@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for taking the time to file a bug report! Please fill out the sections below.
         For **security vulnerabilities**, do NOT file a public issue — see [`SECURITY.md`](https://github.com/Tooark/action-security-scanner/blob/main/SECURITY.md).
-        Using **GitLab CI**? The templates live in [`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner/issues/new/choose).
+        Using **GitLab CI**? The templates live in [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner/issues/new/choose).
 
   - type: checkboxes
     id: preflight
@@ -54,7 +54,7 @@ body:
     attributes:
       label: Scanner image tag
       description: Leave the default unless you overrode scanner-version.
-      placeholder: "e.g., ghcr.io/tooark/security-scanner:1.10"
+      placeholder: "e.g., ghcr.io/tooark/security-scanner:1.13"
     validations:
       required: true
 

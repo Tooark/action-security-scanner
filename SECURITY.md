@@ -10,7 +10,7 @@ the validation scripts or the release workflow, please report it **privately**
 so we can address it before public disclosure.
 
 The GitLab CI/CD templates live in
-[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner);
+[`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner);
 report a vulnerability in them there.
 
 ### How to report
