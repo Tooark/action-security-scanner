@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The header of the onboarding guide links the Action's listing on the GitHub
+  Marketplace, next to the repository link.
+
 ## [1.4.0] - 2026-11-19
 
 The scanner image moves to 1.13. No input, output or default other than
