@@ -36,13 +36,13 @@ jobs:
           fetch-depth: 0
 
       - name: Secret scan
-        uses: Tooark/action-security-scanner@v1.3.0
+        uses: Tooark/action-security-scanner@v1.4.0
         with:
           command: secret-scan
           artifact-name: secret-scan-reports
 
       - name: Dockerfile lint
-        uses: Tooark/action-security-scanner@v1.3.0
+        uses: Tooark/action-security-scanner@v1.4.0
         with:
           command: dockerfile-lint
           dockerfile: Dockerfile
@@ -71,7 +71,7 @@ jobs:
 
       - name: Full security scan
         id: scan
-        uses: Tooark/action-security-scanner@v1.3.0
+        uses: Tooark/action-security-scanner@v1.4.0
         env:
           # Secrets travel through env, never through inputs.
           REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
@@ -106,7 +106,7 @@ jobs:
 
       - name: Filesystem scan
         id: fs
-        uses: Tooark/action-security-scanner@v1.3.0
+        uses: Tooark/action-security-scanner@v1.4.0
         with:
           command: filesystem-scan
           soft-fail: "true"

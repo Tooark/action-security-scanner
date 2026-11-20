@@ -56,7 +56,7 @@ body:
     attributes:
       label: Does it apply to the GitLab templates too?
       description: |
-        Input names are kept identical to Tooark/template-ci-security-scanner, in kebab-case here
+        Input names are kept identical to Tooark/template-security-scanner, in kebab-case here
         and snake_case there. A new input usually belongs in both.
       options:
         - Yes — I will open, or have opened, the matching issue there

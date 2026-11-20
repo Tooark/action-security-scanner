@@ -12,7 +12,7 @@
 # Requires a Linux runner with Docker available.
 #
 # The same scans as GitLab CI/CD components, with the same input names in
-# snake_case: https://github.com/Tooark/template-ci-security-scanner
+# snake_case: https://github.com/Tooark/template-security-scanner
 # =============================================================================
 name: "Tooark Security Scanner"
 description: "Trivy, Hadolint and Betterleaks in one job, with a consolidated ark-report-tools report."
@@ -77,7 +77,7 @@ inputs:
   scanner-version:
     description: "Scanner image tag. Pin it; latest makes workflows non-reproducible."
     required: false
-    default: "1.10"
+    default: "1.13"
 
   # --- sbom -------------------------------------------------------------------
   sbom:

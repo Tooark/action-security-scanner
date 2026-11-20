@@ -22,7 +22,7 @@ Please **search existing issues** first. The reference for every input is the
 workflows live in [`examples/`](examples/).
 
 Using GitLab CI? Questions about the templates go to
-[`Tooark/template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner/issues/new/choose).
+[`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner/issues/new/choose).
 
 ---
 
@@ -58,7 +58,7 @@ Rule of thumb:
 | A scan finds the wrong thing, or a tool flag is unsupported | `base-images`                                                                            |
 | The report format or the consolidated envelope is wrong     | `base-images`                                                                            |
 | The report's `image` object names the wrong image           | here                                                                                     |
-| Anything in a `.gitlab-ci.yml`                              | [`template-ci-security-scanner`](https://github.com/Tooark/template-ci-security-scanner) |
+| Anything in a `.gitlab-ci.yml`                              | [`template-security-scanner`](https://github.com/Tooark/template-security-scanner) |
 
 ---
 
@@ -94,4 +94,4 @@ Full policy and response targets are in [`SECURITY.md`](SECURITY.md).
 | **Support boundaries**  | [SUPPORTED-INTEGRATIONS.md](SUPPORTED-INTEGRATIONS.md)                                        |
 | **Workflow examples**   | [examples/](examples/)                                                                        |
 | **Contributors**        | [CONTRIBUTING.md](CONTRIBUTING.md)                                                            |
-| **GitLab CI users**     | [Tooark/template-ci-security-scanner](https://github.com/Tooark/template-ci-security-scanner) |
+| **GitLab CI users**     | [Tooark/template-security-scanner](https://github.com/Tooark/template-security-scanner) |
