@@ -111,12 +111,15 @@ Para incluir a imagem que o job acabou de construir:
 Workflows completos, prontos para copiar, ficam em
 [`examples/`](https://github.com/Tooark/action-security-scanner/tree/main/examples):
 
-| Exemplo                                                                                                         | O que mostra                                                                                    |
-| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)       | O workflow acima                                                                                |
-| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)   | Checagens rápidas em pull request, scan completo da imagem construída e um job que não bloqueia |
-| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml) | Scan agendado de uma imagem em registry privado, com SBOM                                       |
-| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)   | Findings do Trivy como SARIF na aba Security do repositório                                     |
+| Exemplo                                                                                                           | O que mostra                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)         | O workflow acima                                                                                |
+| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)     | Checagens rápidas em pull request, scan completo da imagem construída e um job que não bloqueia |
+| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml)   | Scan agendado de uma imagem em registry privado, com SBOM                                       |
+| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)     | Findings do Trivy como SARIF na aba Security do repositório                                     |
+| [`report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)   | O relatório enviado por POST a um coletor, no `full-scan` e em um scan individual               |
+| [`report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml) | O relatório em um destino e o SBOM em outro                                                     |
+| [`all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)           | Todos os inputs com o seu default, como referência para escolher                                |
 
 ---
 
@@ -179,7 +182,9 @@ o resultado sai pelo output `exit-code`, para o workflow decidir o que fazer.
 Todo input é opcional, exceto `image` no `image-scan`. Inputs são strings,
 então booleanos são escritos como `"true"` / `"false"`. O
 [`action.yml`](https://github.com/Tooark/action-security-scanner/blob/main/action.yml)
-é a referência oficial.
+é a referência oficial, e o
+[`examples/all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)
+é um workflow com todos os inputs escritos no seu default.
 
 ### O que escanear
 
@@ -260,6 +265,26 @@ Usado pelo `secret-scan` e pela etapa de secrets do `full-scan`.
 
 O bearer token é um secret: passe o `REPORT_TOKEN` via `env`, veja
 [Secrets](#-secrets).
+
+O que é enviado, e quando:
+
+- **O `full-scan` envia sozinho o relatório consolidado.** Qualquer outro
+  comando só envia quando `REPORT_SEND_EACH_SCAN: "true"` está definido como
+  `env` no step; sem isso o `report-url` é aceito, o scan roda e nenhuma
+  requisição é feita.
+- **Com `sbom: "true"` o SBOM também é enviado**, em uma segunda requisição:
+  para o `report-url`, ou para o `REPORT_SBOM_URL` quando ele está definido. O
+  `REPORT_SBOM_TOKEN` usa o `REPORT_TOKEN` quando não é informado, então dois
+  destinos que não devem compartilhar credencial precisam dos dois.
+- **No `full-scan` o SBOM é o da imagem.** Sem o input `image` não há SBOM
+  para gravar nem para enviar.
+
+Um gate disparado não impede o envio: um job que falha por causa de um
+finding ainda assim entregou o relatório. Os dois cenários são workflows
+completos em
+[`examples/report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)
+e
+[`examples/report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml).
 
 ### Comportamento no runner
 
@@ -645,7 +670,7 @@ tem os detalhes.
 
 | Projeto                                                                                         | O que é                                                         |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | Os mesmos scans como templates de CI/CD do GitLab               |
+| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner)       | Os mesmos scans como templates de CI/CD do GitLab               |
 | [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/security-scanner)        | A imagem `security-scanner`: as ferramentas e o CLI `ark-tools` |
 
 ---

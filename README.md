@@ -111,12 +111,15 @@ To include the container image the job has just built:
 Complete workflows, ready to copy, live in
 [`examples/`](https://github.com/Tooark/action-security-scanner/tree/main/examples):
 
-| Example                                                                                                         | What it shows                                                                  |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)       | The workflow above                                                             |
-| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)   | Fast checks on pull requests, full scan of the built image, a non-blocking job |
-| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml) | Scheduled scan of an image in a private registry, with an SBOM                 |
-| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)   | Trivy findings as SARIF in the repository's Security tab                       |
+| Example                                                                                                           | What it shows                                                                  |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)         | The workflow above                                                             |
+| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)     | Fast checks on pull requests, full scan of the built image, a non-blocking job |
+| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml)   | Scheduled scan of an image in a private registry, with an SBOM                 |
+| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)     | Trivy findings as SARIF in the repository's Security tab                       |
+| [`report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)   | The report POSTed to a collector, from `full-scan` and from a single scan      |
+| [`report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml) | The report to one destination and the SBOM to another                          |
+| [`all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)           | Every input with its default, as a reference to pick from                      |
 
 ---
 
@@ -180,7 +183,9 @@ branch on.
 Every input is optional except `image` for `image-scan`. Inputs are strings, so
 booleans are written `"true"` / `"false"`.
 [`action.yml`](https://github.com/Tooark/action-security-scanner/blob/main/action.yml)
-is the authoritative reference.
+is the authoritative reference, and
+[`examples/all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)
+is a workflow with every input written out at its default.
 
 ### What to scan
 
@@ -261,6 +266,24 @@ Used by `secret-scan` and by the secrets step of `full-scan`.
 
 The bearer token is a secret: pass `REPORT_TOKEN` through `env`, see
 [Secrets](#-secrets).
+
+What is sent, and when:
+
+- **`full-scan` sends its consolidated report by itself.** Every other command
+  sends only when `REPORT_SEND_EACH_SCAN: "true"` is set as `env` on the step;
+  without it `report-url` is accepted, the scan runs, and no request is made.
+- **With `sbom: "true"` the SBOM is sent too**, as a second request: to
+  `report-url`, or to `REPORT_SBOM_URL` when that is set. `REPORT_SBOM_TOKEN`
+  falls back to `REPORT_TOKEN`, so two destinations that should not share a
+  credential need both.
+- **In `full-scan` the SBOM is the image's.** Without the `image` input there
+  is no SBOM to write or to send.
+
+A tripped gate does not stop the delivery: a job that fails on a finding has
+still sent its report. Both setups are complete workflows in
+[`examples/report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)
+and
+[`examples/report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml).
 
 ### Runner behaviour
 
@@ -639,7 +662,7 @@ has the details.
 
 | Project                                                                                         | What it is                                                      |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | The same scans as GitLab CI/CD templates                        |
+| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner)       | The same scans as GitLab CI/CD templates                        |
 | [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/security-scanner)        | The `security-scanner` image: the tools and the `ark-tools` CLI |
 
 ---

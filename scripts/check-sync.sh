@@ -3,7 +3,7 @@
 # Guards the invariants that keep the Action and its documentation honest:
 #
 #   1. action.yml and src/run-scanner.sh pin exactly the scanner image declared
-#      in VERSION;
+#      in VERSION, and so does every example that writes the tag out;
 #   2. every input action.yml declares is read by one of its steps, and every
 #      ARK_IN_* it stages is consumed by src/run-scanner.sh -- and the other
 #      way round;
@@ -110,6 +110,21 @@ if [[ $current == *"${tick}${SCANNER_IMAGE}:${SCANNER_VERSION}${tick}"* ]]; then
 else
   fail "SUPPORTED-INTEGRATIONS.md does not pair the Current line with ${SCANNER_IMAGE}:${SCANNER_VERSION}"
 fi
+
+# An example that writes the default tag out is one more pin: unchecked, the
+# next bump leaves it showing people an image the Action no longer runs.
+examples_ok=1
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  value="${hit#*scanner-version:}"
+  value="${value%%#*}"
+  value="${value//[\" ]/}"
+  if [ "$value" != "$SCANNER_VERSION" ]; then
+    fail "${hit%%:*} sets scanner-version to '$value', expected '$SCANNER_VERSION'"
+    examples_ok=0
+  fi
+done < <(grep -HE '^[[:space:]]*scanner-version:' examples/*.yml || true)
+[ "$examples_ok" -eq 1 ] && ok "examples/ scanner-version"
 
 # -----------------------------------------------------------------------------
 # Lists the bare variable names passed to a forwarding helper, following

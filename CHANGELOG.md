@@ -10,6 +10,26 @@ All notable changes to this project are documented here. The format follows
 
 - The header of the onboarding guide links the Action's listing on the GitHub
   Marketplace, next to the repository link.
+- Three more copy-ready workflows in `examples/`:
+  - `report-webhook.yml` sends the report to a collector, from `full-scan` and
+    from a single scan, with a bearer token and extra headers;
+  - `report-and-sbom.yml` sends the report to one destination and the SBOM to
+    another, each with a credential of its own;
+  - `all-inputs.yml` writes every input out at its default, as a reference to
+    pick from, next to the variables that have no input.
+- `scripts/check-sync.sh` also fails when an example sets `scanner-version` to
+  a tag other than the one in `VERSION`.
+
+### Changed
+
+- The README says when a report is actually sent, which it did not: only
+  `full-scan` sends by itself, and every other command needs
+  `REPORT_SEND_EACH_SCAN: "true"` as `env` — without it `report-url` is
+  accepted and no request is made. It also documents where the SBOM goes
+  (`report-url`, unless `REPORT_SBOM_URL` is set), that `REPORT_SBOM_TOKEN`
+  falls back to `REPORT_TOKEN`, and that `full-scan` writes an SBOM only when
+  it has an `image`. Nothing in the Action changed; this is how the image
+  already behaved.
 
 ## [1.4.0] - 2026-11-19
 
