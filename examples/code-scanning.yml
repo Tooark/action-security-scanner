@@ -30,7 +30,7 @@ jobs:
       # to it, named after the scan: scan-reports/trivy-filesystem.sarif.
       - name: Filesystem scan
         id: scan
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         with:
           command: filesystem-scan
           trivy-format: sarif

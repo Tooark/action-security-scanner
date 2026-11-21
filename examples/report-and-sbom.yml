@@ -1,0 +1,108 @@
+# =============================================================================
+# The report to one destination, the SBOM to another.
+# -----------------------------------------------------------------------------
+# Copy into .github/workflows/ in the project you want to scan.
+#
+# Findings usually belong to a security hub, and the SBOM to an inventory of
+# what each image is made of. One scan feeds both:
+#
+#   report-url        <- full-scan-report.json, the ark-report-tools envelope
+#   report-sbom-url   <- trivy-image.sbom.json, the SBOM exactly as Trivy
+#                        wrote it (CycloneDX or SPDX), not wrapped in anything
+#
+# Credentials follow the destination, and that is the part to get right:
+#
+#   - with `report-sbom-url`, the SBOM request carries REPORT_SBOM_TOKEN and
+#     REPORT_SBOM_HEADERS and nothing else. REPORT_TOKEN is never sent there,
+#     not even when both endpoints accept the same token: repeat it in
+#     REPORT_SBOM_TOKEN, or the request goes out with no Authorization;
+#   - without `report-sbom-url`, the SBOM is POSTed to `report-url` as a second
+#     request, with the report's own token and headers.
+#
+# Each request names its body in a header, `X-Ark-Payload: report` or
+# `X-Ark-Payload: sbom`, so one endpoint can take both.
+#
+# full-scan inventories the image. Without the `image` input it has none to
+# inventory, so the SBOM is of the source tree instead
+# (trivy-filesystem.sbom.json, or trivy-repo.sbom.json with scan-mode: repo).
+# =============================================================================
+name: Security report and SBOM
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Full scan, report and SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Betterleaks walks the git history; a shallow clone hides most of it.
+          fetch-depth: 0
+
+      # Expressions reach `run:` through env, never spliced into the script.
+      - name: Build the image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker build -t "myapp:$IMAGE_TAG" .
+
+      - name: Full security scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        env:
+          # Sent to `report-url` only.
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          # Sent to `report-sbom-url` only.
+          REPORT_SBOM_TOKEN: ${{ secrets.SBOM_TOKEN }}
+          # Extra headers for the SBOM request; REPORT_HEADERS is not reused:
+          # REPORT_SBOM_HEADERS: "X-Project: ${{ github.repository }}"
+          # Optional, each defaulting to what the report uses:
+          # REPORT_SBOM_METHOD: PUT
+          # REPORT_SBOM_FAIL_ON_ERROR: "false"
+        with:
+          command: full-scan
+          image: "myapp:${{ github.sha }}"
+          # The image was built on this runner, so Trivy needs the daemon.
+          docker-socket: "true"
+          sbom: "true"
+          # cyclonedx (the default) or spdx-json.
+          sbom-format: cyclonedx
+          report-url: https://security-hub.example.com/api/reports
+          report-sbom-url: https://sbom-inventory.example.com/api/sboms
+          # Applies to the SBOM upload too, unless REPORT_SBOM_FAIL_ON_ERROR
+          # says otherwise. It is also what turns a forgotten
+          # REPORT_SBOM_TOKEN into a failed job instead of a lost SBOM.
+          report-fail-on-error: "true"
+
+  # ---------------------------------------------------------------------------
+  # The same split for an image that already lives in a registry: image-scan
+  # sends its report and its SBOM just as full-scan does.
+  # ---------------------------------------------------------------------------
+  published:
+    name: Image scan, report and SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Lets GITHUB_TOKEN pull private packages of this repository from ghcr.io.
+      packages: read
+    steps:
+      - name: Image scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          REPORT_SBOM_TOKEN: ${{ secrets.SBOM_TOKEN }}
+        with:
+          command: image-scan
+          image: "ghcr.io/my-org/my-app:latest"
+          sbom: "true"
+          report-url: https://security-hub.example.com/api/reports
+          report-sbom-url: https://sbom-inventory.example.com/api/sboms
+          # This workflow runs the Action twice, and two artifacts in one run
+          # cannot share a name.
+          artifact-name: published-image-reports

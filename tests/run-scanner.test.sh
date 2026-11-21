@@ -105,6 +105,19 @@ not_passed "an empty job variable is not forwarded" "BETTERLEAKS_REDACT"
 run_scanner ARK_COMMAND=secret-scan
 not_passed "with neither, the image default applies" "BETTERLEAKS_REDACT"
 
+# The SBOM destination is an input, its credential is not: the image sends the
+# SBOM there with REPORT_SBOM_TOKEN alone, so the token has to arrive by name.
+run_scanner ARK_COMMAND=full-scan ARK_IN_REPORT_URL=https://hub.example/reports \
+  ARK_IN_REPORT_SBOM_URL=https://input.example/sboms \
+  REPORT_SBOM_URL=https://env.example/sboms REPORT_SBOM_TOKEN=s3cr3t
+passed "report-url is forwarded with its value" "REPORT_URL=https://hub.example/reports"
+passed "report-sbom-url is forwarded with its value" "REPORT_SBOM_URL=https://input.example/sboms"
+not_passed "and a REPORT_SBOM_URL in the job env does not replace it" "REPORT_SBOM_URL"
+passed "the SBOM token comes from the job env, by name" "REPORT_SBOM_TOKEN"
+
+run_scanner ARK_COMMAND=full-scan REPORT_SBOM_URL=https://env.example/sboms
+passed "a blank report-sbom-url lets the job env through" "REPORT_SBOM_URL"
+
 echo
 echo "2. secrets"
 

@@ -2,8 +2,8 @@
 # scripts/check-sync.sh enforces that action.yml and src/run-scanner.sh pin
 # exactly SCANNER_IMAGE:SCANNER_VERSION and that the docs quote these values;
 # scripts/render-docs.sh fills the onboarding guide's placeholders from them.
-COMPONENT_VERSION=1.4.0
+COMPONENT_VERSION=1.5.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.13
+SCANNER_VERSION=1.14
 REPORT_SCHEMA=ark-report-tools
 REPORT_VERSION=1.3

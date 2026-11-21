@@ -1,0 +1,224 @@
+# =============================================================================
+# Every input of the Action, in one place.
+# -----------------------------------------------------------------------------
+# A reference to pick from, not a setup to copy whole: delete what you do not
+# need. An input you leave out behaves exactly like the value shown here,
+# because every value below is the default or changes nothing:
+#
+#   - a value such as "error" or "10m" is the default, written out;
+#   - "" is how an input with no default is left unset. An empty input is
+#     never forwarded, so the image default (or a variable set as env) applies.
+#     The comment gives an example of a real value.
+#
+# The exceptions are the three a scan of a freshly built image cannot do
+# without, and each says so: `image`, `docker-socket` and `artifact-name`.
+#
+# One thing a written-out default does change: an input always wins over a
+# variable set as env. If the workflow sets TRIVY_SEVERITY at the top, keeping
+# `trivy-severity` below overrides it, default or not. Delete the input, or
+# leave it "", wherever the env is meant to decide.
+#
+# No single scan reads every input, so the file has four steps: full-scan
+# carries all the inputs it reads, and the last three show the ones that
+# belong to another command (`target`, `dockerfile`, `no-git`).
+#
+# Inputs are strings: booleans are written "true" / "false".
+# =============================================================================
+name: Security (every input)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    name: Every input
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Betterleaks walks the git history; a shallow clone hides most of it.
+          fetch-depth: 0
+
+      # Expressions reach `run:` through env, never spliced into the script.
+      - name: Build the image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker build -t "myapp:$IMAGE_TAG" .
+
+      - name: Full scan with every input it reads
+        id: scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        # Secrets, and the settings that have no input, travel as env. Only
+        # variables under the image's own prefixes (TRIVY_, HADOLINT_,
+        # BETTERLEAKS_, SBOM_, FULL_SCAN_, REPORT_) reach the container, and an
+        # empty one is not passed on.
+        env:
+          # Bearer token sent to `report-url`.
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          # Credentials for a private registry or a Trivy server:
+          # TRIVY_USERNAME: ${{ github.actor }}
+          # TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          # TRIVY_TOKEN: ${{ secrets.TRIVY_TOKEN }}
+          # Report delivery beyond the three inputs:
+          # REPORT_METHOD: POST
+          # REPORT_HEADERS: "X-Project: ${{ github.repository }}"
+          # "false" stops a single scan from sending; full-scan always sends.
+          # REPORT_SEND_EACH_SCAN: "false"
+          # Credentials of `report-sbom-url` (see report-and-sbom.yml). The
+          # SBOM destination never receives REPORT_TOKEN or REPORT_HEADERS:
+          # REPORT_SBOM_TOKEN: ${{ secrets.SBOM_TOKEN }}
+          # REPORT_SBOM_HEADERS: "X-Project: ${{ github.repository }}"
+          # Reuse the cached vulnerability database without refreshing it:
+          # TRIVY_SKIP_DB_UPDATE: "true"
+        with:
+          # --- what to run ----------------------------------------------------
+          # full-scan, image-scan, filesystem-scan, config-scan, repo-scan,
+          # dockerfile-lint or secret-scan.
+          command: full-scan
+          # Image to scan. Required by image-scan; without it full-scan skips
+          # its image step.
+          image: "myapp:${{ github.sha }}"
+          # Directory to scan, relative to the workspace.
+          path: "."
+          # Dockerfiles linted by full-scan, comma-separated, relative to path.
+          dockerfiles: Dockerfile
+          # How full-scan scans the source tree: fs or repo.
+          scan-mode: fs
+          # Turn off one step of full-scan. skip-image stays empty on purpose:
+          # with no `image` the Action skips that step by itself, and a
+          # written-out "false" would turn that off and fail the scan with
+          # "<image> required".
+          skip-image: ""
+          skip-lint: "false"
+          skip-secrets: "false"
+          # Extra flags for the underlying tool, passed after `--`.
+          # E.g. "--skip-dirs node_modules"
+          extra-args: ""
+
+          # --- scanner image --------------------------------------------------
+          # Change the repository to pull from a mirror.
+          scanner-image: ghcr.io/tooark/security-scanner
+          # Pin a tag; `latest` makes runs non-reproducible.
+          scanner-version: "1.14"
+
+          # --- sbom -----------------------------------------------------------
+          # Also write an SBOM: of the image in image-scan and in a full-scan
+          # that has one, of the source tree in filesystem-scan and in a
+          # full-scan without `image`.
+          sbom: "false"
+          # cyclonedx or spdx-json.
+          sbom-format: cyclonedx
+
+          # --- trivy ----------------------------------------------------------
+          # Severities written to the report.
+          trivy-severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          # Severities that fail the job.
+          trivy-severity-fail: HIGH,CRITICAL
+          # Leave vulnerabilities without a fix out of the report.
+          trivy-ignore-unfixed: "false"
+          # Fail only on vulnerabilities that have a fix.
+          trivy-ignore-unfixed-fail: "true"
+          # "0" turns the Trivy gate off.
+          trivy-exit-code: "1"
+          # json, sarif, table, cyclonedx or spdx-json. Anything but json adds
+          # a converted copy next to the JSON report.
+          trivy-format: json
+          # Empty keeps Trivy's own choice. E.g. "vuln,secret,misconfig,license"
+          trivy-scanners: ""
+          trivy-timeout: 10m
+          # Scan through a Trivy server. E.g. "https://trivy.example.com:4954";
+          # its token goes in the TRIVY_TOKEN env.
+          trivy-server: ""
+          # Empty picks up a .trivyignore at the repository root.
+          # E.g. ".security/trivyignore"
+          trivy-ignorefile: ""
+
+          # --- hadolint -------------------------------------------------------
+          # Lowest level that fails the job: error, warning, info, style or none.
+          hadolint-failure-level: error
+          # E.g. ".hadolint.yaml"
+          hadolint-config: ""
+          # json, tty or sarif.
+          hadolint-format: json
+          # Findings itemized in the log.
+          hadolint-log-max-findings: "20"
+
+          # --- betterleaks ----------------------------------------------------
+          # Fail the job when a secret is detected.
+          betterleaks-fail-on-findings: "true"
+          # Share of each secret masked in the report, 0 to 100. Lower it only
+          # if the artifact is as restricted as the secrets themselves.
+          betterleaks-redact: "100"
+          # Findings already accepted. E.g. ".security/betterleaks-baseline.json"
+          betterleaks-baseline: ""
+          # E.g. ".betterleaks.toml"
+          betterleaks-config: ""
+          # json, csv, junit, sarif or template.
+          betterleaks-format: json
+          # Findings itemized in the log.
+          betterleaks-log-max-findings: "20"
+
+          # --- report webhook -------------------------------------------------
+          # Comma-separated URLs the report is POSTed to, by every scan (see
+          # report-webhook.yml). E.g. "https://security-hub.example.com/api/reports"
+          report-url: ""
+          # Where the SBOM goes instead of report-url (see report-and-sbom.yml).
+          # E.g. "https://sbom-inventory.example.com/api/sboms"
+          report-sbom-url: ""
+          # Fail the job when the upload fails.
+          report-fail-on-error: "false"
+
+          # --- runner behaviour -----------------------------------------------
+          # Where the reports are written, relative to the workspace.
+          reports-dir: scan-reports
+          # Mount the Docker socket. Needed here only because the image was
+          # built on this runner; it hands the container root on the runner.
+          docker-socket: "true"
+          # Keep the Trivy vulnerability database between runs.
+          trivy-cache: "true"
+          # "true" reports a tripped gate through the exit-code output instead
+          # of failing the step.
+          soft-fail: "false"
+          # Upload reports-dir as a workflow artifact, even when the scan fails.
+          upload-artifact: "true"
+          # Must be unique in the workflow run, hence one name per step here.
+          artifact-name: security-reports
+          artifact-retention-days: "7"
+
+      - name: Use the outputs
+        if: always()
+        env:
+          EXIT_CODE: ${{ steps.scan.outputs.exit-code }}
+          REPORTS_DIR: ${{ steps.scan.outputs.reports-dir }}
+          REPORT: ${{ steps.scan.outputs.report }}
+        run: echo "exit=$EXIT_CODE dir=$REPORTS_DIR report=$REPORT"
+
+      # --- inputs read by other commands --------------------------------------
+
+      - name: Repository scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        with:
+          command: repo-scan
+          # Local path or remote repository URL. Empty scans the workspace.
+          # E.g. "https://github.com/my-org/another-repo"
+          target: ""
+          artifact-name: repo-scan-reports
+
+      - name: Dockerfile lint
+        uses: Tooark/action-security-scanner@v1.5.0
+        with:
+          command: dockerfile-lint
+          # The one Dockerfile to lint, relative to the workspace.
+          dockerfile: Dockerfile
+          artifact-name: dockerfile-lint-reports
+
+      - name: Secret scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        with:
+          command: secret-scan
+          # "true" scans only the working tree and skips the git history.
+          no-git: "false"
+          artifact-name: secret-scan-reports

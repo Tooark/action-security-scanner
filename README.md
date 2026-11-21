@@ -88,7 +88,7 @@ jobs:
         with:
           fetch-depth: 0 # Betterleaks needs the full git history
 
-      - uses: Tooark/action-security-scanner@v1.4.0
+      - uses: Tooark/action-security-scanner@v1.5.0
 ```
 
 With no inputs the Action runs `full-scan` without the image step: Trivy over
@@ -101,7 +101,7 @@ To include the container image the job has just built:
 ```yaml
 - run: docker build -t "myapp:${{ github.sha }}" .
 
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   with:
     image: "myapp:${{ github.sha }}"
     docker-socket: "true" # only when the image was built on this runner
@@ -111,12 +111,15 @@ To include the container image the job has just built:
 Complete workflows, ready to copy, live in
 [`examples/`](https://github.com/Tooark/action-security-scanner/tree/main/examples):
 
-| Example                                                                                                         | What it shows                                                                  |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)       | The workflow above                                                             |
-| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)   | Fast checks on pull requests, full scan of the built image, a non-blocking job |
-| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml) | Scheduled scan of an image in a private registry, with an SBOM                 |
-| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)   | Trivy findings as SARIF in the repository's Security tab                       |
+| Example                                                                                                           | What it shows                                                                  |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [`quick-start.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/quick-start.yml)         | The workflow above                                                             |
+| [`security-scan.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/security-scan.yml)     | Fast checks on pull requests, full scan of the built image, a non-blocking job |
+| [`registry-image.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/registry-image.yml)   | Scheduled scan of an image in a private registry, with an SBOM                 |
+| [`code-scanning.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/code-scanning.yml)     | Trivy findings as SARIF in the repository's Security tab                       |
+| [`report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)   | The report POSTed to a collector, from `full-scan` and from a single scan      |
+| [`report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml) | The report to one destination and the SBOM to another                          |
+| [`all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)           | Every input with its default, as a reference to pick from                      |
 
 ---
 
@@ -180,7 +183,9 @@ branch on.
 Every input is optional except `image` for `image-scan`. Inputs are strings, so
 booleans are written `"true"` / `"false"`.
 [`action.yml`](https://github.com/Tooark/action-security-scanner/blob/main/action.yml)
-is the authoritative reference.
+is the authoritative reference, and
+[`examples/all-inputs.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/all-inputs.yml)
+is a workflow with every input written out at its default.
 
 ### What to scan
 
@@ -197,7 +202,7 @@ is the authoritative reference.
 | `skip-lint`    | `false`      | `full-scan`                                                  | Skip the Hadolint step                                     |
 | `skip-secrets` | `false`      | `full-scan`                                                  | Skip the Betterleaks step                                  |
 | `no-git`       | `false`      | `secret-scan`                                                | Scan only the working tree, not the git history            |
-| `sbom`         | `false`      | `full-scan`, `image-scan`, `filesystem-scan`                 | Also generate an SBOM                                      |
+| `sbom`         | `false`      | `full-scan`, `image-scan`, `filesystem-scan`                 | Also generate an SBOM; see [Reports](#-reports)            |
 | `sbom-format`  | `cyclonedx`  | same as `sbom`                                               | `cyclonedx` or `spdx-json`                                 |
 | `extra-args`   | —            | all                                                          | Extra flags forwarded to the underlying tool after `--`    |
 
@@ -209,7 +214,7 @@ container mount point.
 | Input             | Default                           | Notes                                                   |
 | ----------------- | --------------------------------- | ------------------------------------------------------- |
 | `scanner-image`   | `ghcr.io/tooark/security-scanner` | Change it to pull from a mirror                         |
-| `scanner-version` | `1.13`                            | Image tag. Pin it; `latest` makes runs non-reproducible |
+| `scanner-version` | `1.14`                            | Image tag. Pin it; `latest` makes runs non-reproducible |
 
 ### Trivy
 
@@ -254,13 +259,40 @@ Used by `secret-scan` and by the secrets step of `full-scan`.
 
 ### Report webhook
 
-| Input                  | Image default | Notes                                        |
-| ---------------------- | ------------- | -------------------------------------------- |
-| `report-url`           | —             | Comma-separated URLs the report is POSTed to |
-| `report-fail-on-error` | `false`       | Fail the step when the upload fails          |
+| Input                  | Image default | Notes                                                      |
+| ---------------------- | ------------- | ---------------------------------------------------------- |
+| `report-url`           | —             | Comma-separated URLs the report is POSTed to               |
+| `report-sbom-url`      | —             | Comma-separated URLs for the SBOM, instead of `report-url` |
+| `report-fail-on-error` | `false`       | Fail the step when an upload fails                         |
 
-The bearer token is a secret: pass `REPORT_TOKEN` through `env`, see
-[Secrets](#-secrets).
+The tokens are secrets: pass `REPORT_TOKEN` and `REPORT_SBOM_TOKEN` through
+`env`, see [Secrets](#-secrets).
+
+What is sent, and when:
+
+- **Every scan sends its report when `report-url` is set.** `full-scan` sends
+  one consolidated envelope, never one per step; every other command sends its
+  own. To keep the URL set and stop a single scan from sending anything, its
+  SBOM included, set `REPORT_SEND_EACH_SCAN: "false"` as `env` on the step.
+  `full-scan` ignores that variable.
+- **With `sbom: "true"` the SBOM is sent too**, as a second request, to
+  `report-url` with the report's token and headers.
+- **`report-sbom-url` gives the SBOM a destination of its own, and credentials
+  of its own.** That request carries only `REPORT_SBOM_TOKEN` and
+  `REPORT_SBOM_HEADERS`: `REPORT_TOKEN` and `REPORT_HEADERS` are never sent to
+  it, not even when both endpoints accept the same token. Without the SBOM
+  token the request goes out with no `Authorization`, and the log names the
+  variable that was not reused.
+- **Each request says what it carries.** The header `X-Ark-Payload` is `report`
+  or `sbom`, so one endpoint can take both. The envelopes are not shaped alike
+  either: `full-scan` keeps its steps under `results`, a single scan keeps its
+  one result under `report`, and the `command` field tells them apart.
+
+A tripped gate does not stop the delivery: a job that fails on a finding has
+still sent its report. Both setups are complete workflows in
+[`examples/report-webhook.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-webhook.yml)
+and
+[`examples/report-and-sbom.yml`](https://github.com/Tooark/action-security-scanner/blob/main/examples/report-and-sbom.yml).
 
 ### Runner behaviour
 
@@ -293,7 +325,7 @@ The tool inputs map one to one to the environment variables documented in the
 
 ```yaml
 - id: scan
-  uses: Tooark/action-security-scanner@v1.4.0
+  uses: Tooark/action-security-scanner@v1.5.0
   with:
     soft-fail: "true"
 
@@ -319,9 +351,22 @@ Everything lands in `reports-dir` and is uploaded as one artifact.
 
 The envelope is the stable format: tool output wrapped with the scan target,
 the repository, the commit and the scanner image that produced it. It is what
-`report-url` receives. `sbom: "true"` adds `trivy-image.sbom.json` or
-`trivy-filesystem.sbom.json`, and a `trivy-format` other than `json` adds a
-converted copy next to the JSON report, such as `trivy-filesystem.sarif`.
+`report-url` receives.
+
+`sbom: "true"` adds the SBOM as a file of its own, named after what it
+inventories:
+
+| Command                          | SBOM of         | File                         |
+| -------------------------------- | --------------- | ---------------------------- |
+| `image-scan`                     | the image       | `trivy-image.sbom.json`      |
+| `full-scan` with an `image`      | the image       | `trivy-image.sbom.json`      |
+| `full-scan` without an `image`   | the source tree | `trivy-filesystem.sbom.json` |
+| the same, with `scan-mode: repo` | the source tree | `trivy-repo.sbom.json`       |
+| `filesystem-scan`                | the source tree | `trivy-filesystem.sbom.json` |
+
+The SBOM is never embedded in the envelope: `sbom_enabled` there only says
+that one was asked for. A `trivy-format` other than `json` adds a converted
+copy next to the JSON report, such as `trivy-filesystem.sarif`.
 
 ---
 
@@ -353,7 +398,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: Tooark/action-security-scanner@v1.4.0
+      - uses: Tooark/action-security-scanner@v1.5.0
         with:
           command: filesystem-scan
 ```
@@ -366,14 +411,18 @@ Input values show up in the workflow log, so secrets never travel as inputs.
 Pass them as `env`, and they are forwarded to the container automatically:
 
 `TRIVY_TOKEN`, `TRIVY_USERNAME`, `TRIVY_PASSWORD`, `REPORT_TOKEN`,
-`REPORT_HEADERS`, `REPORT_SBOM_URL`, `REPORT_SBOM_TOKEN`.
+`REPORT_HEADERS`, `REPORT_SBOM_TOKEN`, `REPORT_SBOM_HEADERS`.
+
+The last two are the credentials of `report-sbom-url`, and the only ones sent
+to it: an SBOM destination of its own does not receive `REPORT_TOKEN` or
+`REPORT_HEADERS`.
 
 They are handed to Docker by name, not by value, so a secret appears neither in
 the command line of `docker run` nor in the log, which prints only the names of
 the variables it took from the environment.
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   env:
     REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
   with:
@@ -392,7 +441,7 @@ short commit — never the secret itself.
 Docker socket stays unmounted:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   env:
     TRIVY_USERNAME: ${{ github.actor }}
     TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -404,12 +453,12 @@ Docker socket stays unmounted:
 **Run more than one scan in a job.** Give each run its own `artifact-name`:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   with:
     command: secret-scan
     artifact-name: secret-scan-reports
 
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   with:
     command: dockerfile-lint
     dockerfile: docker/Dockerfile.worker
@@ -420,7 +469,7 @@ Docker socket stays unmounted:
 is picked up automatically — or a Betterleaks baseline:
 
 ```yaml
-- uses: Tooark/action-security-scanner@v1.4.0
+- uses: Tooark/action-security-scanner@v1.5.0
   with:
     command: secret-scan
     betterleaks-baseline: .security/betterleaks-baseline.json
@@ -591,6 +640,12 @@ as a git safe directory. Custom `reports-dir` values inherit this.
 **Dockerfile lint handles one file per step.** Use `full-scan` with
 `dockerfiles: "a,b,c"`, or run `dockerfile-lint` once per file.
 
+**A report URL set for the whole workflow reaches every scan.** Each command
+sends its own report, so `REPORT_URL` in a workflow-level `env` makes every
+step of the Action post to the collector, and with
+`report-fail-on-error: "true"` a collector that rejects one of them fails that
+job. Set `REPORT_SEND_EACH_SCAN: "false"` on the steps that should stay quiet.
+
 **Pull requests from forks get no secrets.** A `REPORT_TOKEN` or registry
 password is empty there, so a scan that needs one fails or skips the upload.
 Scan the source tree on `pull_request` and keep the steps that need secrets
@@ -639,7 +694,7 @@ has the details.
 
 | Project                                                                                         | What it is                                                      |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | The same scans as GitLab CI/CD templates                        |
+| [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner)       | The same scans as GitLab CI/CD templates                        |
 | [`Tooark/base-images`](https://github.com/Tooark/base-images/tree/main/security-scanner)        | The `security-scanner` image: the tools and the `ark-tools` CLI |
 
 ---

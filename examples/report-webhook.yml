@@ -1,0 +1,91 @@
+# =============================================================================
+# Sending the report to a collector.
+# -----------------------------------------------------------------------------
+# Copy into .github/workflows/ in the project you want to scan.
+#
+# Every scan POSTs its ark-report-tools envelope to every URL in `report-url`
+# when it finishes, whether or not a gate failed the job:
+#
+#   POST <report-url>
+#   Content-Type: application/json
+#   X-Ark-Payload: report
+#   Authorization: Bearer <REPORT_TOKEN>      only when the token is set
+#
+# The body is the same JSON the job uploads as an artifact:
+# full-scan-report.json for full-scan, ark-report-<command>.json for the other
+# scans. The two are not shaped alike: full-scan carries its steps under
+# `results`, a single scan carries its one result under `report`. A collector
+# that receives both tells them apart by the `command` field. Any 2xx answer
+# counts as delivered.
+#
+# The URL is an input, so it shows up in the workflow log. The token is a
+# secret, so it travels through env and never through an input.
+# =============================================================================
+name: Security report
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # full-scan sends one consolidated report once every step is done, never one
+  # per step.
+  # ---------------------------------------------------------------------------
+  full:
+    name: Full scan, reported
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Betterleaks walks the git history; a shallow clone hides most of it.
+          fetch-depth: 0
+
+      - name: Full security scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          # Extra request headers, one per line, for a collector that expects
+          # more than the bearer token.
+          REPORT_HEADERS: |
+            X-Project: ${{ github.repository }}
+            X-Environment: production
+        with:
+          command: full-scan
+          # Comma-separated: every URL receives the same body, the same token
+          # and the same headers.
+          report-url: https://security-hub.example.com/api/reports
+          # A collector that is down fails the job instead of losing the
+          # report without anyone noticing. The default only logs the failure.
+          report-fail-on-error: "true"
+
+  # ---------------------------------------------------------------------------
+  # A single scan sends its own report the same way: `report-url` is all it
+  # takes.
+  # ---------------------------------------------------------------------------
+  secret-scan:
+    name: Weekly secret scan, reported
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan
+        uses: Tooark/action-security-scanner@v1.5.0
+        env:
+          REPORT_TOKEN: ${{ secrets.REPORT_TOKEN }}
+          # To keep `report-url` set (for instance at the workflow level) and
+          # have this scan send nothing. full-scan ignores it and always sends.
+          # REPORT_SEND_EACH_SCAN: "false"
+        with:
+          command: secret-scan
+          report-url: https://security-hub.example.com/api/reports
+          report-fail-on-error: "true"

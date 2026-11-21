@@ -12,6 +12,9 @@ the READMEs, is checked:
     declares;
   * ``command`` names a scan the runner script accepts.
 
+``examples/all-inputs.yml`` is held to one more rule, the one its name
+promises: between its steps it passes every input ``action.yml`` declares.
+
 Usage: python3 scripts/check-examples.py
 """
 
@@ -29,6 +32,8 @@ except ImportError:  # pragma: no cover - environment problem, not a docs one
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACTION_REPO = "Tooark/action-security-scanner"
 READMES = ("README.md", "README.pt-BR.md")
+# The example that documents every input; a new input has to land there too.
+REFERENCE = "examples/all-inputs.yml"
 YAML_BLOCK = re.compile(r"^```ya?ml\n(.*?)^```", re.MULTILINE | re.DOTALL)
 OUTPUT_REF = re.compile(r"steps\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)")
 COMMANDS = re.compile(r"^\s*((?:[a-z-]+ \| )+[a-z-]+)\) ;;$", re.MULTILINE)
@@ -79,6 +84,14 @@ def check_document(text: str, inputs: set[str], outputs: set[str], commands: set
   return len(steps), problems
 
 
+def missing_inputs(text: str, inputs: set[str]) -> list[str]:
+  """Returns the declared inputs that no Action step of the document passes."""
+  passed: set[str] = set()
+  for step in action_steps(yaml.safe_load(text)):
+    passed.update(step.get("with") or {})
+  return sorted(inputs - passed)
+
+
 def main() -> int:
   action = yaml.safe_load((REPO_ROOT / "action.yml").read_text(encoding="utf-8"))
   inputs = set(action["inputs"])
@@ -99,6 +112,11 @@ def main() -> int:
   for label, text in documents:
     try:
       count, problems = check_document(text, inputs, outputs, commands)
+      if label == REFERENCE:
+        problems += [
+          f"never passes '{name}', which action.yml declares"
+          for name in missing_inputs(text, inputs)
+        ]
     except yaml.YAMLError as exc:
       count, problems = 0, [f"does not parse as YAML: {exc}"]
     total_steps += count

@@ -32,4 +32,4 @@ jobs:
 
       # Always pin a tag or a commit SHA. Reports are uploaded as the
       # `security-reports` artifact.
-      - uses: Tooark/action-security-scanner@v1.4.0
+      - uses: Tooark/action-security-scanner@v1.5.0
