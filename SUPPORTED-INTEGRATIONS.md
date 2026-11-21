@@ -15,7 +15,7 @@ filled in; the `bug` template asks for exactly the fields this page indexes.
 
 | Platform                               | How it is consumed                                                                              | Status            |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------- |
-| **GitHub Actions** — github.com        | `uses: Tooark/action-security-scanner@v1.4.0`                                                   | ✅ Supported      |
+| **GitHub Actions** — github.com        | `uses: Tooark/action-security-scanner@v1.5.0`                                                   | ✅ Supported      |
 | **Direct invocation**                  | `src/run-scanner.sh` with `ARK_*` variables                                                     | ⚠️ Best effort    |
 | **GitLab CI**                          | [`Tooark/template-security-scanner`](https://github.com/Tooark/template-security-scanner) | ➡️ Sister project |
 | Jenkins, Azure DevOps, CircleCI, Drone | —                                                                                               | ❌ Not covered    |
@@ -92,7 +92,8 @@ with the default shallow clone it sees almost nothing **and does not complain**.
 
 | Action version      | Scanner image                          | Status     |
 | ------------------- | -------------------------------------- | ---------- |
-| `1.4.x`             | `ghcr.io/tooark/security-scanner:1.13` | Current    |
+| `1.5.x`             | `ghcr.io/tooark/security-scanner:1.14` | Current    |
+| `1.4.x`             | `ghcr.io/tooark/security-scanner:1.13` | Superseded |
 | `1.2.x` and `1.3.x` | `ghcr.io/tooark/security-scanner:1.10` | Superseded |
 | `1.0.x` and `1.1.x` | `ghcr.io/tooark/security-scanner:1.9`  | Superseded |
 

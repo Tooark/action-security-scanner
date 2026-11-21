@@ -6,10 +6,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-21
+
+The scanner image moves to 1.14, which changes how reports and SBOMs are
+delivered. Two of those changes can fail a workflow that passed on 1.4:
+
+- **A scan other than `full-scan` now sends its report.** `report-url` was
+  accepted there and nothing was sent, unless the step also set
+  `REPORT_SEND_EACH_SCAN: "true"`; every command now POSTs its own envelope
+  without it. A collector that only knows `full-scan` reports starts receiving
+  the others, and with `report-fail-on-error: "true"` one it rejects fails the
+  job. To keep a step from sending, set `REPORT_SEND_EACH_SCAN: "false"` as
+  `env` on it. A workflow that already set the variable to `"true"` sees no
+  change.
+- **A separate SBOM destination no longer receives the report's credentials.**
+  With `REPORT_SBOM_URL` set, the SBOM request carries only
+  `REPORT_SBOM_TOKEN` and `REPORT_SBOM_HEADERS`. A workflow that set the URL
+  and counted on `REPORT_TOKEN` or `REPORT_HEADERS` being reused now sends the
+  SBOM with no `Authorization`: set `REPORT_SBOM_TOKEN` (and
+  `REPORT_SBOM_HEADERS`), even when both endpoints accept the same token.
+
+A workflow that needs time pins `scanner-version: "1.13"`.
+
 ### Added
 
-- The header of the onboarding guide links the Action's listing on the GitHub
-  Marketplace, next to the repository link.
+- `report-sbom-url` input: the destination of the SBOM, next to `report-url`.
+  It sets `REPORT_SBOM_URL`, which could only be set as `env`; that still
+  works, and the input wins when both are present. Its token is a secret and
+  stays out of the inputs: pass `REPORT_SBOM_TOKEN` as `env`.
 - Three more copy-ready workflows in `examples/`:
   - `report-webhook.yml` sends the report to a collector, from `full-scan` and
     from a single scan, with a bearer token and extra headers;
@@ -17,19 +41,52 @@ All notable changes to this project are documented here. The format follows
     another, each with a credential of its own;
   - `all-inputs.yml` writes every input out at its default, as a reference to
     pick from, next to the variables that have no input.
-- `scripts/check-sync.sh` also fails when an example sets `scanner-version` to
-  a tag other than the one in `VERSION`.
+- Three more guards in CI, each for something this release would otherwise
+  have left stale: `scripts/check-sync.sh` fails when an example sets
+  `scanner-version` to a tag other than the one in `VERSION`, and when the
+  onboarding guide counts a number of inputs other than the one `action.yml`
+  declares; `scripts/check-examples.py` fails when `examples/all-inputs.yml`
+  leaves an input out.
+- The header of the onboarding guide links the Action's listing on the GitHub
+  Marketplace, next to the repository link.
 
 ### Changed
 
-- The README says when a report is actually sent, which it did not: only
-  `full-scan` sends by itself, and every other command needs
-  `REPORT_SEND_EACH_SCAN: "true"` as `env` — without it `report-url` is
-  accepted and no request is made. It also documents where the SBOM goes
-  (`report-url`, unless `REPORT_SBOM_URL` is set), that `REPORT_SBOM_TOKEN`
-  falls back to `REPORT_TOKEN`, and that `full-scan` writes an SBOM only when
-  it has an `image`. Nothing in the Action changed; this is how the image
-  already behaved.
+- Scanner image bumped to `ghcr.io/tooark/security-scanner:1.14`, the new
+  default of `scanner-version`. The tools are the ones of 1.13 (Trivy 0.76.2,
+  Hadolint 2.15.1, Betterleaks 1.10.1) and the envelope is still
+  `ark-report-tools` v1.3; what changes is `ark-tools` itself:
+  - every command sends its report when `report-url` is set, where only
+    `full-scan` did. `REPORT_SEND_EACH_SCAN` now defaults to `true`, and
+    `"false"` is the opt-out. `full-scan` is not affected by it: it keeps
+    sending one consolidated report, never one per step;
+  - with `REPORT_SBOM_URL` set, the SBOM request uses `REPORT_SBOM_TOKEN` and
+    `REPORT_SBOM_HEADERS` alone, and the log names any report credential that
+    was not reused. Without it nothing changes: the SBOM goes to `report-url`
+    with the report's token and headers;
+  - `full-scan` with `sbom: "true"` and no `image` writes and sends the SBOM
+    of the source tree, `trivy-filesystem.sbom.json`, or `trivy-repo.sbom.json`
+    with `scan-mode: repo`. It wrote none before, while the envelope still
+    said `sbom_enabled: true`. The Action skips the image step by itself when
+    `image` is empty, so this is what such a workflow gets now;
+  - every request carries the header `X-Ark-Payload`, `report` or `sbom`, so
+    a collector that receives both at one endpoint can tell them apart
+    without reading the body.
+
+  A collector behind `report-url` has two things to check. It may now receive
+  envelopes of single scans, which keep their result under `report` where
+  `full-scan` keeps its steps under `results`; the `command` field says which
+  one arrived. And if it validates credentials on a separate SBOM endpoint,
+  the workflows that feed it need `REPORT_SBOM_TOKEN`.
+
+  Released as a minor because the image moved a minor: the scanner default
+  follows the image's own versioning (see `CONTRIBUTING.md`).
+
+- The READMEs (en, pt-BR) document report delivery as it is in 1.14: when a
+  report is sent and how to opt out, where the SBOM goes and with which
+  credentials, what the SBOM inventories for each command, and the
+  `X-Ark-Payload` header. The Gotchas section warns that a report URL set for
+  the whole workflow reaches every scan.
 
 ## [1.4.0] - 2026-11-19
 
@@ -368,7 +425,8 @@ a tag — this content first reached consumers as part of 1.1.0.
   socket mount, unredacted Betterleaks output, and Trivy's secret scanner
   writing findings into an uploaded artifact.
 
-[Unreleased]: https://github.com/Tooark/action-security-scanner/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/Tooark/action-security-scanner/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Tooark/action-security-scanner/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Tooark/action-security-scanner/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Tooark/action-security-scanner/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Tooark/action-security-scanner/compare/v1.1.0...v1.2.0

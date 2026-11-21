@@ -157,9 +157,9 @@ The project follows [Semantic Versioning](https://semver.org/).
 scanner image tag it pins, and the report envelope that image writes:
 
 ```text
-COMPONENT_VERSION=1.4.0
+COMPONENT_VERSION=1.5.0
 SCANNER_IMAGE=ghcr.io/tooark/security-scanner
-SCANNER_VERSION=1.13
+SCANNER_VERSION=1.14
 REPORT_SCHEMA=ark-report-tools
 REPORT_VERSION=1.3
 ```
@@ -201,7 +201,7 @@ Use the area as the scope when it applies:
 ```text
 feat(action): add trivy-ignorefile to the Trivy scans
 fix(runner): treat an empty path as the workspace root
-chore(version): bump the scanner image to 1.13
+chore(version): bump the scanner image to 1.14
 docs(readme): document the artifact name collision
 ```
 

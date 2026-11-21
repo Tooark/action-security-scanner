@@ -7,7 +7,8 @@
 #   2. every input action.yml declares is read by one of its steps, and every
 #      ARK_IN_* it stages is consumed by src/run-scanner.sh -- and the other
 #      way round;
-#   3. every input is documented in both READMEs;
+#   3. every input is documented in both READMEs, and the onboarding guide
+#      counts as many inputs as action.yml declares;
 #   4. every copy-paste reference in the docs pins COMPONENT_VERSION, every
 #      mention of the report envelope names REPORT_VERSION, and the onboarding
 #      guide takes all of its versions from VERSION.
@@ -228,6 +229,17 @@ for readme in README.md README.pt-BR.md; do
   done <<<"$inputs"
   [ "$readme_ok" -eq 1 ] && ok "$readme"
 done
+
+# The guide says how many inputs there are, in prose. Nobody recounts a number
+# in a sentence, so a new input leaves it one short.
+input_count="$(grep -c . <<<"$inputs")"
+guide_counts="$(grep -oE '[0-9]+ inputs|São [0-9]+, cada|There are [0-9]+, each' docs/index.html |
+  grep -oE '[0-9]+' | sort -u | tr '\n' ' ')"
+if [ "${guide_counts% }" = "$input_count" ]; then
+  ok "docs/index.html counts $input_count inputs"
+else
+  fail "docs/index.html counts '${guide_counts% }' inputs, action.yml declares $input_count"
+fi
 
 echo
 echo "4. versions quoted in the documentation"

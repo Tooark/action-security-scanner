@@ -50,7 +50,7 @@ jobs:
 
       - name: Full scan with every input it reads
         id: scan
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         # Secrets, and the settings that have no input, travel as env. Only
         # variables under the image's own prefixes (TRIVY_, HADOLINT_,
         # BETTERLEAKS_, SBOM_, FULL_SCAN_, REPORT_) reach the container, and an
@@ -62,14 +62,15 @@ jobs:
           # TRIVY_USERNAME: ${{ github.actor }}
           # TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           # TRIVY_TOKEN: ${{ secrets.TRIVY_TOKEN }}
-          # Report delivery beyond the two inputs. Every scan but full-scan
-          # needs REPORT_SEND_EACH_SCAN to send anything at all:
+          # Report delivery beyond the three inputs:
           # REPORT_METHOD: POST
           # REPORT_HEADERS: "X-Project: ${{ github.repository }}"
-          # REPORT_SEND_EACH_SCAN: "true"
-          # A destination of its own for the SBOM (see report-and-sbom.yml):
-          # REPORT_SBOM_URL: https://sbom-inventory.example.com/api/sboms
+          # "false" stops a single scan from sending; full-scan always sends.
+          # REPORT_SEND_EACH_SCAN: "false"
+          # Credentials of `report-sbom-url` (see report-and-sbom.yml). The
+          # SBOM destination never receives REPORT_TOKEN or REPORT_HEADERS:
           # REPORT_SBOM_TOKEN: ${{ secrets.SBOM_TOKEN }}
+          # REPORT_SBOM_HEADERS: "X-Project: ${{ github.repository }}"
           # Reuse the cached vulnerability database without refreshing it:
           # TRIVY_SKIP_DB_UPDATE: "true"
         with:
@@ -101,11 +102,12 @@ jobs:
           # Change the repository to pull from a mirror.
           scanner-image: ghcr.io/tooark/security-scanner
           # Pin a tag; `latest` makes runs non-reproducible.
-          scanner-version: "1.13"
+          scanner-version: "1.14"
 
           # --- sbom -----------------------------------------------------------
-          # Also write an SBOM: of the image in full-scan and image-scan, of the
-          # source tree in filesystem-scan.
+          # Also write an SBOM: of the image in image-scan and in a full-scan
+          # that has one, of the source tree in filesystem-scan and in a
+          # full-scan without `image`.
           sbom: "false"
           # cyclonedx or spdx-json.
           sbom-format: cyclonedx
@@ -160,9 +162,12 @@ jobs:
           betterleaks-log-max-findings: "20"
 
           # --- report webhook -------------------------------------------------
-          # Comma-separated URLs the report is POSTed to (see
+          # Comma-separated URLs the report is POSTed to, by every scan (see
           # report-webhook.yml). E.g. "https://security-hub.example.com/api/reports"
           report-url: ""
+          # Where the SBOM goes instead of report-url (see report-and-sbom.yml).
+          # E.g. "https://sbom-inventory.example.com/api/sboms"
+          report-sbom-url: ""
           # Fail the job when the upload fails.
           report-fail-on-error: "false"
 
@@ -194,7 +199,7 @@ jobs:
       # --- inputs read by other commands --------------------------------------
 
       - name: Repository scan
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         with:
           command: repo-scan
           # Local path or remote repository URL. Empty scans the workspace.
@@ -203,7 +208,7 @@ jobs:
           artifact-name: repo-scan-reports
 
       - name: Dockerfile lint
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         with:
           command: dockerfile-lint
           # The one Dockerfile to lint, relative to the workspace.
@@ -211,7 +216,7 @@ jobs:
           artifact-name: dockerfile-lint-reports
 
       - name: Secret scan
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         with:
           command: secret-scan
           # "true" scans only the working tree and skips the git history.

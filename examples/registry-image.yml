@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Image scan
-        uses: Tooark/action-security-scanner@v1.4.0
+        uses: Tooark/action-security-scanner@v1.5.0
         env:
           # Registry credentials are secrets, so they travel through env and
           # never through inputs. Trivy reads both variables natively. Drop
